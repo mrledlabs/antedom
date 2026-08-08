@@ -5,6 +5,9 @@
 //
 // Directive attributes, processed in this order:
 //
+//	ante:keep               on a <template>: process it but keep the element
+//	ante:layout / ante:slot / ante:fill   composition markers, consumed
+//	                     by Compose before the walk (see docs/templating.md)
 //	ante:if="expr"          remove the element unless expr is truthy
 //	ante:for="x[, i] of expr"  repeat the element per item of the array expr
 //	ante:text="expr"        replace children with expr as escaped text
@@ -12,8 +15,12 @@
 //	ante:name="expr"        set attribute name to expr; false/null/undefined
 //	                     drops the attribute, true makes it boolean
 //
-// A <template> element is unwrapped after processing, so it can group
-// siblings under one ante:if/ante:for without emitting a wrapper tag.
+// A <template> bearing any ante: attribute is antedom's: processed,
+// then unwrapped — grouping siblings under one ante:if/ante:for, or
+// marking a slot or fill, without emitting a wrapper tag. A plain
+// <template> is the client's: shipped verbatim, contents untouched.
+// ante:keep processes a template's directives and contents but keeps
+// the element, for client-bound templates that need build-time logic.
 // Because output is serialized from the parsed tree, it is well-formed
 // by construction and all interpolation is contextually escaped.
 package antedom
@@ -60,13 +67,19 @@ func New() (*Engine, error) {
 // Render parses src as a full HTML document, evaluates its directive
 // attributes against data (the root JS scope), and writes the result.
 func (e *Engine) Render(w io.Writer, src []byte, data map[string]any) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	doc, err := html.Parse(bytes.NewReader(src))
 	if err != nil {
 		return err
 	}
+	return e.RenderDoc(w, doc, data)
+}
+
+// RenderDoc is Render for an already-parsed (e.g. composed) document.
+// It mutates doc.
+func (e *Engine) RenderDoc(w io.Writer, doc *html.Node, data map[string]any) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	if data == nil {
 		data = map[string]any{}
 	}
@@ -133,7 +146,27 @@ func (e *Engine) walkChildren(n *html.Node, scope *sobek.Object) error {
 
 // element applies the directives of one element, recursing into its
 // subtree. It may remove n or replace it with copies of itself.
+// A plain <template> — no ante: attributes — is client-bound:
+// left verbatim, contents untouched. One with directives is consumed
+// (unwrapped) after processing, unless ante:keep retains it.
 func (e *Engine) element(n *html.Node, scope *sobek.Object) error {
+	if n.DataAtom == atom.Template && !hasDirectives(n) {
+		return nil
+	}
+	_, keep := takeAttr(n, Prefix+"keep")
+	return e.apply(n, scope, n.DataAtom == atom.Template && !keep)
+}
+
+// apply runs the directive pipeline on n; consume unwraps n at the
+// end. It is threaded through ante:for so loop copies, whose
+// directive attributes are already stripped, still unwrap.
+func (e *Engine) apply(n *html.Node, scope *sobek.Object, consume bool) error {
+	// Composition markers already served by Compose (or orphaned in a
+	// standalone render); discard so they neither emit nor evaluate.
+	takeAttr(n, Prefix+"layout")
+	takeAttr(n, Prefix+"slot")
+	takeAttr(n, Prefix+"fill")
+
 	if src, ok := takeAttr(n, Prefix+"if"); ok {
 		v, err := e.eval(src, scope)
 		if err != nil {
@@ -145,7 +178,7 @@ func (e *Engine) element(n *html.Node, scope *sobek.Object) error {
 		}
 	}
 	if src, ok := takeAttr(n, Prefix+"for"); ok {
-		return e.loop(n, src, scope)
+		return e.loop(n, src, scope, consume)
 	}
 
 	if src, ok := takeAttr(n, Prefix+"text"); ok {
@@ -190,7 +223,7 @@ func (e *Engine) element(n *html.Node, scope *sobek.Object) error {
 	}
 	n.Attr = attrs
 
-	if n.DataAtom == atom.Template {
+	if consume {
 		unwrap(n)
 	}
 	return nil
@@ -198,7 +231,7 @@ func (e *Engine) element(n *html.Node, scope *sobek.Object) error {
 
 // loop expands `ante:for="item[, index] of expr"`: one processed copy of n
 // per array element, each under a child scope binding the loop names.
-func (e *Engine) loop(n *html.Node, src string, scope *sobek.Object) error {
+func (e *Engine) loop(n *html.Node, src string, scope *sobek.Object, consume bool) error {
 	names, arrExpr, ok := strings.Cut(src, " of ")
 	if !ok {
 		return fmt.Errorf(`ante:for %q: want "name[, index] of expr"`, src)
@@ -224,12 +257,22 @@ func (e *Engine) loop(n *html.Node, src string, scope *sobek.Object) error {
 		}
 		copy := clone(n)
 		n.Parent.InsertBefore(copy, n)
-		if err := e.element(copy, iter); err != nil {
+		if err := e.apply(copy, iter, consume); err != nil {
 			return err
 		}
 	}
 	n.Parent.RemoveChild(n)
 	return nil
+}
+
+// hasDirectives reports whether n carries any ante: attribute.
+func hasDirectives(n *html.Node) bool {
+	for _, a := range n.Attr {
+		if strings.HasPrefix(a.Key, Prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func takeAttr(n *html.Node, key string) (string, bool) {

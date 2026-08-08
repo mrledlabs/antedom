@@ -10,6 +10,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 // Site is one site definition — where templates live and where data
@@ -19,6 +21,9 @@ type Site struct {
 	// Pages is a directory tree of page templates: each *.html file
 	// renders at its own relative path, other files pass through.
 	Pages string
+	// Layout is a directory of layout templates, named by ante:layout
+	// attributes (see docs/templating.md); empty disables composition.
+	Layout string
 	// Data assembles the JS scope shared by every page. It is called
 	// per render so serve mode always sees fresh data; it must return
 	// a fresh map (render adds page-specific keys).
@@ -29,9 +34,17 @@ type Site struct {
 // to Pages) into w. Each render gets its own Engine: template JS can
 // leak globals into a runtime, so none is reused across pages.
 func (s *Site) render(w io.Writer, rel string) error {
-	src, err := os.ReadFile(filepath.Join(s.Pages, filepath.FromSlash(rel)))
+	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
 	if err != nil {
 		return err
+	}
+	if s.Layout != "" {
+		doc, err = Compose(doc, func(name string) (*html.Node, error) {
+			return s.parse(filepath.Join(s.Layout, filepath.FromSlash(name)))
+		})
+		if err != nil {
+			return fmt.Errorf("composing %s: %w", rel, err)
+		}
 	}
 	data, err := s.Data()
 	if err != nil {
@@ -42,10 +55,18 @@ func (s *Site) render(w io.Writer, rel string) error {
 	if err != nil {
 		return err
 	}
-	if err := engine.Render(w, src, data); err != nil {
+	if err := engine.RenderDoc(w, doc, data); err != nil {
 		return fmt.Errorf("rendering %s: %w", rel, err)
 	}
 	return nil
+}
+
+func (s *Site) parse(path string) (*html.Node, error) {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return html.Parse(bytes.NewReader(src))
 }
 
 // urlPath maps a page file to its URL path: demo/index.html -> /demo/.

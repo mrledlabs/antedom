@@ -1,7 +1,7 @@
 # Templating: layouts, slots, fills
 
-Status: designed, not yet implemented
-(`partials` in the demo data's directive table).
+Status: implemented
+(`Compose` in `layout.go`; the demo site in `antedom/` uses it).
 
 ## Model
 
@@ -52,10 +52,6 @@ In one sentence:
 a `<template>` you hand to antedom is consumed,
 one you don't is yours,
 and `ante:keep` hands it over without giving it up.
-
-Note this refines the current engine,
-which unwraps every `<template>` unconditionally;
-the change must land before the slot work builds on it.
 
 ## Rendering
 

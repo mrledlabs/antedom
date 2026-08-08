@@ -1,5 +1,6 @@
 // Command antedom builds or serves an antedom site: a directory
-// holding pages/ (page templates, non-HTML files pass through)
+// holding pages/ (page templates, non-HTML files pass through),
+// layout/ (layout templates named by ante:layout),
 // and data/ (*.json files, in scope as data.<name>).
 // -build renders the site to a directory and exits;
 // otherwise it serves the site over HTTP, rendering per request.
@@ -20,14 +21,15 @@ import (
 )
 
 func main() {
-	siteDir := flag.String("site", ".", "site directory holding pages/ and data/")
+	siteDir := flag.String("site", ".", "site directory holding pages/, layout/, and data/")
 	listen := flag.String("listen", "127.0.0.1:35481", "listen address (serve mode)")
 	build := flag.String("build", "", "render the site to this directory and exit")
 	flag.Parse()
 
 	site := &antedom.Site{
-		Pages: filepath.Join(*siteDir, "pages"),
-		Data:  dataFunc(filepath.Join(*siteDir, "data")),
+		Pages:  filepath.Join(*siteDir, "pages"),
+		Layout: filepath.Join(*siteDir, "layout"),
+		Data:   dataFunc(filepath.Join(*siteDir, "data")),
 	}
 	if *build != "" {
 		pages, err := site.Build(*build)
