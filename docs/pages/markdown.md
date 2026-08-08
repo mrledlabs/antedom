@@ -1,5 +1,11 @@
 <template ante:layout="base.html">
 
+<script ante:meta type="application/json">
+{
+  "weight": 3
+}
+</script>
+
 <template ante:fill="main">
 
 # Markdown pages

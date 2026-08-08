@@ -70,6 +70,57 @@ func TestSiteBuild(t *testing.T) {
 	}
 }
 
+func TestPageMeta(t *testing.T) {
+	render := func(src string) (string, error) {
+		pages := t.TempDir()
+		if err := os.WriteFile(filepath.Join(pages, "index.html"), []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		s := &Site{Pages: pages, Data: func() (map[string]any, error) { return map[string]any{}, nil }}
+		var buf strings.Builder
+		err := s.render(&buf, "index.html")
+		return buf.String(), err
+	}
+
+	out, err := render(`<body><script ante:meta type="application/json">
+{
+  "title": "Meta title",
+  "weight": 2,
+  "date": "2026-01-05",
+  "params": { "author": "ada" }
+}
+</script><h1 ante:text="page.title"></h1><p ante:text="page.params.author"></p></body>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"<h1>Meta title</h1>", "<p>ada</p>"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in %s", want, out)
+		}
+	}
+	if strings.Contains(out, "<script") {
+		t.Errorf("metadata script shipped: %s", out)
+	}
+
+	meta := func(body string) string {
+		return `<body><script ante:meta type="application/json">` + body + `</script></body>`
+	}
+	for name, src := range map[string]string{
+		"unknown key":   meta(`{"author": "ada"}`),
+		"wrong type":    meta(`{"weight": "heavy"}`),
+		"bad date":      meta(`{"date": "January 5th"}`),
+		"trailing data": meta(`{"weight": 1} {"weight": 2}`),
+		"empty body":    meta(``),
+		"non-script":    `<body><div ante:meta>{"weight": 1}</div></body>`,
+		"two elements": `<body><script ante:meta type="application/json">{"weight": 1}</script>` +
+			`<script ante:meta type="application/json">{"weight": 2}</script></body>`,
+	} {
+		if _, err := render(src); err == nil {
+			t.Errorf("%s: no error for %s", name, src)
+		}
+	}
+}
+
 func TestSiteHandler(t *testing.T) {
 	h := demoSite(t).Handler()
 	for url, want := range map[string]string{

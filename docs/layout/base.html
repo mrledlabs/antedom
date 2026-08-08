@@ -2,14 +2,14 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title ante:text="`antedom: ${(pages.find(p => p.path === page.path) || {}).title || page.path}`">antedom</title>
+  <title ante:text="`antedom: ${page.title}`">antedom</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <nav>
     <img src="/icon.svg" alt="antedom">
-    <p ante:text="`antedom: ${(pages.find(p => p.path === page.path) || {}).title || page.path}`">antedom</p>
+    <p ante:text="`antedom: ${page.title}`">antedom</p>
     <a ante:for="p of pages"
        ante:href="p.path"
        ante:style="p.depth ? `--depth: ${p.depth}` : false"

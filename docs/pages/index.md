@@ -1,5 +1,11 @@
 <template ante:layout="base.html">
 
+<script ante:meta type="application/json">
+{
+  "weight": 1
+}
+</script>
+
 <template ante:fill="main">
 
 # docs
@@ -21,6 +27,10 @@ served with `go run ./cmd/antedom -site docs`.
 - [Markdown pages](markdown.html) —
   `pages/**/*.md` as CommonMark content,
   `ante:` machinery as raw HTML, layouts and directives unchanged.
+- [sampleblog](sampleblog/) —
+  example posts ordered by `date` from page metadata,
+  a `<script ante:meta>` element in the page source
+  (the docs pages order themselves with `weight` the same way).
 - [Directive demo](demo/) —
   a plain-HTML page in the same site,
   exercising <code ante:text="data.site.directives.length"></code> directives

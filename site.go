@@ -2,6 +2,7 @@ package antedom
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -53,12 +55,19 @@ func (s *Site) render(w io.Writer, rel string) error {
 	if err != nil {
 		return fmt.Errorf("assembling data: %w", err)
 	}
-	data["page"] = map[string]any{"path": urlPath(rel)}
 	pages, err := s.pageList()
 	if err != nil {
 		return fmt.Errorf("listing pages: %w", err)
 	}
 	data["pages"] = pages
+	u := urlPath(rel)
+	data["page"] = map[string]any{"path": u}
+	for _, pm := range pages {
+		if pm["path"] == u {
+			data["page"] = pm
+			break
+		}
+	}
 	engine, err := New()
 	if err != nil {
 		return err
@@ -80,16 +89,109 @@ func (s *Site) parse(path string) (*html.Node, error) {
 	return html.Parse(bytes.NewReader(src))
 }
 
-// pageList walks Pages and returns every page as {path, title, depth},
-// sorted by path, for templates as the pages global (e.g. a nav).
-// A page's title is the text of the first <h1> in its source —
-// pre-composition, pre-render — falling back to its URL path.
-// depth is directory nesting: 0 for top-level pages (an index page
-// counts at its own directory's level, so /demo/ is 0), +1 per
-// directory below that (/demo/attributes.html is 1).
-// Sources are re-parsed per render so serve mode tracks edits.
+// pageMeta is a page's optional metadata — antedom's answer to
+// frontmatter: a <script ante:meta type="application/json"> element
+// anywhere in the page source, its body one JSON object allowing
+// exactly these keys (anything else is a build error):
+//
+//	title  string — overrides the title derived from the first <h1>
+//	weight number — sibling sort order (see pageInfo.before)
+//	date   string — RFC 3339: a date (2006-01-02) or full timestamp
+//	params object — free-form values for the site's own use
+//
+// The rendering walk drops the element, so metadata never ships.
+type pageMeta struct {
+	Title  string         `json:"title"`
+	Date   string         `json:"date"`
+	Weight *float64       `json:"weight"`
+	Params map[string]any `json:"params"`
+}
+
+// takeMeta finds a page's ante:meta element, validates it, and fills
+// info from it. No element is fine; two, a non-script host, malformed
+// or unknown keys, or a bad date are errors.
+func takeMeta(doc *html.Node, info *pageInfo) error {
+	var metas []*html.Node
+	find(doc, func(el *html.Node) bool {
+		if _, ok := attrVal(el, Prefix+"meta"); ok {
+			metas = append(metas, el)
+		}
+		return false // keep searching; find is our walker here
+	})
+	if len(metas) == 0 {
+		return nil
+	}
+	if len(metas) > 1 {
+		return fmt.Errorf("%d ante:meta elements, want at most one", len(metas))
+	}
+	sc := metas[0]
+	if sc.DataAtom != atom.Script {
+		return fmt.Errorf("ante:meta on <%s>, want <script>", sc.Data)
+	}
+	dec := json.NewDecoder(strings.NewReader(text(sc)))
+	dec.DisallowUnknownFields()
+	var meta pageMeta
+	if err := dec.Decode(&meta); err != nil {
+		return err
+	}
+	if dec.More() {
+		return fmt.Errorf("trailing data after the metadata object")
+	}
+	if meta.Date != "" && !validDate(meta.Date) {
+		return fmt.Errorf("date %q: want RFC 3339 (2006-01-02 or a full timestamp)", meta.Date)
+	}
+	info.title, info.date, info.weight, info.params = meta.Title, meta.Date, meta.Weight, meta.Params
+	return nil
+}
+
+func validDate(s string) bool {
+	for _, layout := range []string{"2006-01-02", time.RFC3339} {
+		if _, err := time.Parse(layout, s); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+type pageInfo struct {
+	path, title, date string
+	weight            *float64
+	params            map[string]any
+	depth             int
+}
+
+// before orders siblings: by weight (ascending, weighted before
+// unweighted), then date (newest first, dated before dateless),
+// then title.
+func (a *pageInfo) before(b *pageInfo) bool {
+	switch {
+	case a.weight != nil && b.weight != nil && *a.weight != *b.weight:
+		return *a.weight < *b.weight
+	case (a.weight != nil) != (b.weight != nil):
+		return a.weight != nil
+	}
+	if a.date != b.date {
+		if a.date == "" || b.date == "" {
+			return b.date == ""
+		}
+		return a.date > b.date
+	}
+	return strings.ToLower(a.title) < strings.ToLower(b.title)
+}
+
+// pageList walks Pages and returns every page as
+// {path, title, depth, date?, weight?, params?}, for templates as the
+// pages global (e.g. a nav). All but path and depth come from the
+// page's metadata (see pageMeta); a missing title falls back to the first
+// <h1> in the page source — pre-composition, pre-render — then to
+// the URL path. depth is directory nesting: 0 for top-level pages
+// (an index page counts at its own directory's level, so /demo/ is
+// 0), +1 per directory below that (/demo/attributes.html is 1).
+// Order is hierarchical: siblings sort by before, and a section's
+// pages follow its index page. Sources are re-parsed per render so
+// serve mode tracks edits.
 func (s *Site) pageList() ([]map[string]any, error) {
-	var pages []map[string]any
+	groups := map[string][]*pageInfo{} // sibling group per directory
 	err := filepath.WalkDir(s.Pages, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -106,21 +208,78 @@ func (s *Site) pageList() ([]map[string]any, error) {
 			return err
 		}
 		u := urlPath(filepath.ToSlash(rel))
-		title := u
-		if h1 := find(doc, func(el *html.Node) bool { return el.DataAtom == atom.H1 }); h1 != nil {
-			title = text(h1)
-		}
 		depth := strings.Count(strings.TrimSuffix(u, "/"), "/") - 1
 		if depth < 0 {
 			depth = 0
 		}
-		pages = append(pages, map[string]any{"path": u, "title": title, "depth": depth})
+		info := &pageInfo{path: u, depth: depth}
+		if err := takeMeta(doc, info); err != nil {
+			return fmt.Errorf("%s: page metadata: %w", p, err)
+		}
+		if info.title == "" {
+			info.title = u
+			if h1 := find(doc, func(el *html.Node) bool { return el.DataAtom == atom.H1 }); h1 != nil {
+				info.title = text(h1)
+			}
+		}
+		groups[groupOf(u)] = append(groups[groupOf(u)], info)
 		return nil
 	})
-	sort.Slice(pages, func(i, j int) bool {
-		return pages[i]["path"].(string) < pages[j]["path"].(string)
-	})
-	return pages, err
+	if err != nil {
+		return nil, err
+	}
+	for _, g := range groups {
+		sort.SliceStable(g, func(i, j int) bool { return g[i].before(g[j]) })
+	}
+	var out []map[string]any
+	emitted := map[string]bool{}
+	var emit func(dir string)
+	emit = func(dir string) {
+		if emitted[dir] {
+			return
+		}
+		emitted[dir] = true
+		for _, pi := range groups[dir] {
+			m := map[string]any{"path": pi.path, "title": pi.title, "depth": pi.depth}
+			if pi.date != "" {
+				m["date"] = pi.date
+			}
+			if pi.weight != nil {
+				m["weight"] = *pi.weight
+			}
+			if pi.params != nil {
+				m["params"] = pi.params
+			}
+			out = append(out, m)
+			if pi.path != "/" && strings.HasSuffix(pi.path, "/") {
+				emit(pi.path)
+			}
+		}
+	}
+	emit("/")
+	var rest []string // directories with no index page above them
+	for dir := range groups {
+		if !emitted[dir] {
+			rest = append(rest, dir)
+		}
+	}
+	sort.Strings(rest)
+	for _, dir := range rest {
+		emit(dir)
+	}
+	return out, nil
+}
+
+// groupOf maps a page's URL path to its sibling group: the directory
+// it is listed in. A section's index page is a sibling of its
+// parent's pages (/demo/ groups under /), everything else groups
+// under its own directory (/demo/attributes.html under /demo/).
+func groupOf(u string) string {
+	if u == "/" {
+		return "/"
+	}
+	t := strings.TrimSuffix(u, "/")
+	return t[:strings.LastIndex(t, "/")+1]
 }
 
 // text returns n's concatenated text content.

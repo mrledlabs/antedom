@@ -35,14 +35,14 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 7 {
-		t.Errorf("built %d pages, want 7", pages)
+	if pages != 9 {
+		t.Errorf("built %d pages, want 9", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
 			"<title>antedom: docs</title>",
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
-			`<a aria-current="page" href="/">docs</a>`, // sidebar marks the page
+			`<a aria-current="page" href="/">docs</a>`,                         // sidebar marks the page
 			`<a href="/templating.html">Templating: layouts, slots, fills</a>`, // title from that page's h1
 			`<h1 id="docs">docs</h1>`,
 			`<a href="templating.html">`,
@@ -69,9 +69,17 @@ func TestDocsSite(t *testing.T) {
 			`<a aria-current="page" href="/demo/attributes.html" style="--depth: 1">Bound attributes</a>`,
 			"this link to docs is bound",
 		},
-		"subsection/subpage.html": {
-			`<a href="/subsection/">Subsection example</a>`, // section index stays top-level
-			`<a aria-current="page" href="/subsection/subpage.html" style="--depth: 1">Subpage example</a>`,
+		"sampleblog/index.html": {
+			// The post list: ante:for over the pages global, in order.
+			"<a href=\"/sampleblog/third-post.html\">Third post</a>\n    — <time>2026-08-01</time>",
+		},
+		"sampleblog/first-post.html": {
+			"<title>antedom: First post</title>",
+			"<time>2026-06-10</time>", // page.date from metadata
+			`<a aria-current="page" href="/sampleblog/first-post.html" style="--depth: 1">First post</a>`,
+		},
+		"sampleblog/second-post.html": {
+			"<span>A. N. Author</span>", // page.params, free-form metadata
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},
@@ -88,5 +96,27 @@ func TestDocsSite(t *testing.T) {
 		if strings.HasSuffix(name, ".html") && strings.Contains(string(data), "<template") {
 			t.Errorf("%s: template element not unwrapped", name)
 		}
+		if strings.Contains(string(data), "<script ante:meta") {
+			t.Errorf("%s: page metadata script not dropped", name)
+		}
+	}
+	// Nav order: weight ascending, then date newest-first for the
+	// unweighted blog posts, children after their section index.
+	nav, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := -1
+	for _, href := range []string{
+		`href="/"`, `href="/templating.html"`, `href="/markdown.html"`,
+		`href="/demo/"`, `href="/demo/attributes.html"`, `href="/sampleblog/"`,
+		`href="/sampleblog/third-post.html"`, `href="/sampleblog/second-post.html"`,
+		`href="/sampleblog/first-post.html"`,
+	} {
+		i := strings.Index(string(nav), href)
+		if i < 0 || i < last {
+			t.Errorf("nav order: %s at %d, after position %d", href, i, last)
+		}
+		last = i
 	}
 }

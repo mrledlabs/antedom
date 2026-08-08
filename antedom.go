@@ -6,6 +6,8 @@
 // Directive attributes, processed in this order:
 //
 //	ante:keep               on a <template>: process it but keep the element
+//	ante:meta               page metadata (see Site.pageList): the element
+//	                     is dropped from output, subtree unevaluated
 //	ante:layout / ante:slot / ante:fill   composition markers, consumed
 //	                     by Compose before the walk (see docs/templating.md)
 //	ante:if="expr"          remove the element unless expr is truthy
@@ -161,6 +163,12 @@ func (e *Engine) element(n *html.Node, scope *sobek.Object) error {
 // end. It is threaded through ante:for so loop copies, whose
 // directive attributes are already stripped, still unwrap.
 func (e *Engine) apply(n *html.Node, scope *sobek.Object, consume bool) error {
+	// Page metadata is input, not output: already read by pageList,
+	// dropped here so it never ships.
+	if _, ok := attrVal(n, Prefix+"meta"); ok {
+		n.Parent.RemoveChild(n)
+		return nil
+	}
 	// Composition markers already served by Compose (or orphaned in a
 	// standalone render); discard so they neither emit nor evaluate.
 	takeAttr(n, Prefix+"layout")
