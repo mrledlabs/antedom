@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title ante:text="page.title + ' · ' + site.title">placeholder</title>
+</head>
+<body>
+  <h1 ante:text="page.title">placeholder</h1>
+  <p ante:if="page.draft" class="draft">Draft — not yet published.</p>
+
+  <ul class="projects">
+    <li ante:for="p, i of page.projects">
+      <a ante:href="'/projects/' + p.slug + '/'"
+         ante:class="p.status === 'active' ? 'active' : null"
+         ante:text="(i + 1) + '. ' + p.title">placeholder</a>
+    </li>
+  </ul>
+
+  <template ante:if="page.tags.length > 0">
+    <h2>Tags</h2>
+    <span ante:for="t of page.tags" class="tag" ante:text="t.toUpperCase()">x</span>
+  </template>
+
+  <div class="body" ante:html="page.body"></div>
+  <footer ante:text="'© ' + site.year"></footer>
+</body>
+</html>
