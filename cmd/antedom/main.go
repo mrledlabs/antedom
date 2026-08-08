@@ -25,6 +25,7 @@ func main() {
 	siteDir := flag.String("site", ".", "site directory holding pages/, layout/, and data/")
 	listen := flag.String("listen", "127.0.0.1:35481", "listen address (serve mode)")
 	build := flag.String("build", "", "render the site to this directory and exit")
+	reload := flag.Bool("reload", true, "reload browsers when site files change (serve mode)")
 	flag.Parse()
 
 	site := &antedom.Site{
@@ -40,8 +41,12 @@ func main() {
 		log.Printf("built %d pages into %s", pages, *build)
 		return
 	}
+	handler := http.Handler(site.Handler())
+	if *reload {
+		handler = antedom.LiveReload(handler, *siteDir)
+	}
 	log.Printf("antedom serving %s on %s", *siteDir, *listen)
-	log.Fatal(http.ListenAndServe(*listen, site.Handler()))
+	log.Fatal(http.ListenAndServe(*listen, handler))
 }
 
 // dataFunc assembles the page scope: each data/*.json file under
