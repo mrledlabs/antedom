@@ -22,7 +22,9 @@ Three attributes:
 - `ante:layout="<file>"` — on the root element of a content page
   (or of another layout), names the layout to fill,
   resolved in the site's `layout/` directory.
-  A page without `ante:layout` renders standalone, as today.
+  `ante:layout` is also what makes a file a page at all:
+  an `.html` or `.md` file without it is opaque —
+  passed through verbatim like any other file, never rendered.
 - `ante:slot="<name>"` — layout side: marks a hole.
   The element's children are the fallback;
   a matching fill replaces them.

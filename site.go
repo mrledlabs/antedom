@@ -22,9 +22,11 @@ import (
 // comes from — driven two ways: Build renders every page to an output
 // directory, Handler renders pages per request. Both share render.
 type Site struct {
-	// Pages is a directory tree of page templates: each *.html file
-	// renders at its own relative path, each *.md file is markdown
-	// content rendering at its .html path, other files pass through.
+	// Pages is a directory tree: *.html and *.md files bearing an
+	// ante:layout element are page templates — each renders at its
+	// own relative path, .md at its .html path — and every other
+	// file (a layout-less .html or .md included) passes through
+	// verbatim.
 	Pages string
 	// Layout is a directory of layout templates, named by ante:layout
 	// attributes (see docs/templating.md); empty disables composition.
@@ -87,6 +89,21 @@ func (s *Site) parse(path string) (*html.Node, error) {
 		return parseMarkdown(src)
 	}
 	return html.Parse(bytes.NewReader(src))
+}
+
+// isPage reports whether the file is a page template: an .html or
+// .md file bearing an ante:layout element. Every other file — a
+// layout-less .html or .md included — is opaque: pageList skips it,
+// Build copies it, and Handler serves it verbatim.
+func (s *Site) isPage(path string) (bool, error) {
+	if !strings.HasSuffix(path, ".html") && !strings.HasSuffix(path, ".md") {
+		return false, nil
+	}
+	doc, err := s.parse(path)
+	if err != nil {
+		return false, err
+	}
+	return findAttr(doc, Prefix+"layout") != nil, nil
 }
 
 // pageMeta is a page's optional metadata — antedom's answer to
@@ -206,6 +223,9 @@ func (s *Site) pageList() ([]map[string]any, error) {
 		if err != nil {
 			return err
 		}
+		if findAttr(doc, Prefix+"layout") == nil {
+			return nil // opaque file, not a page (see isPage)
+		}
 		u := urlPath(filepath.ToSlash(rel))
 		depth := strings.Count(strings.TrimSuffix(u, "/"), "/") - 1
 		if depth < 0 {
@@ -319,10 +339,13 @@ func (s *Site) Build(out string) (int, error) {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
+		if ok, err := s.isPage(p); err != nil {
+			return err
+		} else if !ok {
+			return copyFile(dst, p)
+		}
 		if strings.HasSuffix(p, ".md") {
 			dst = strings.TrimSuffix(dst, ".md") + ".html"
-		} else if !strings.HasSuffix(p, ".html") {
-			return copyFile(dst, p)
 		}
 		f, err := os.Create(dst)
 		if err != nil {
@@ -339,23 +362,28 @@ func (s *Site) Build(out string) (int, error) {
 }
 
 // Handler serves the site per request: a trailing slash (or an
-// extensionless path) resolves to its index.html, .html renders
-// (from the .html template, or its .md source when absent),
-// everything else is served verbatim. Mount under a prefix with
-// http.StripPrefix.
+// extensionless path) resolves to its index.html, a page renders
+// (from the .html template, or its .md source when absent), and
+// everything else — layout-less .html and .md included — is served
+// verbatim. Page-source .md is never served. Mount under a prefix
+// with http.StripPrefix.
 func (s *Site) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if rel == "" || !strings.Contains(path.Base(rel), ".") {
 			rel = path.Join(rel, "index.html")
 		}
-		if strings.HasSuffix(rel, ".md") {
-			// Markdown is page source; it renders at the .html path.
-			http.NotFound(w, r)
+		file := filepath.Join(s.Pages, filepath.FromSlash(rel))
+		if ok, err := s.isPage(file); err != nil && !os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if err == nil && !ok {
+			http.ServeFile(w, r, file)
 			return
 		}
-		if !strings.HasSuffix(rel, ".html") {
-			http.ServeFile(w, r, filepath.Join(s.Pages, filepath.FromSlash(rel)))
+		if strings.HasSuffix(rel, ".md") {
+			// Markdown page source; it renders at the .html path.
+			http.NotFound(w, r)
 			return
 		}
 		// Render to a buffer so an error returns a clean 500
@@ -363,8 +391,13 @@ func (s *Site) Handler() http.Handler {
 		var buf bytes.Buffer
 		err := s.render(&buf, rel)
 		if os.IsNotExist(err) {
-			buf.Reset()
-			err = s.render(&buf, strings.TrimSuffix(rel, ".html")+".md")
+			// A missing .html falls back to its .md source, but only
+			// when that source is itself a page.
+			md := strings.TrimSuffix(rel, ".html") + ".md"
+			if ok, mdErr := s.isPage(filepath.Join(s.Pages, filepath.FromSlash(md))); mdErr == nil && ok {
+				buf.Reset()
+				err = s.render(&buf, md)
+			}
 		}
 		if err != nil {
 			if os.IsNotExist(err) {

@@ -1,6 +1,6 @@
 // Command antedom builds or serves an antedom site: a directory
-// holding pages/ (*.html page templates and *.md markdown pages,
-// other files pass through),
+// holding pages/ (*.html page templates and *.md markdown pages —
+// the files bearing ante:layout — everything else passes through),
 // layout/ (layout templates named by ante:layout),
 // and data/ (*.json files, in scope as data.<name>).
 // -build renders the site to a directory and exits;

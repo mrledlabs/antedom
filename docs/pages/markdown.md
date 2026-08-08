@@ -3,7 +3,7 @@
 <script ante:meta type="application/json">
 {
   "title": "Markdown pages",
-  "weight": 3
+  "weight": 4
 }
 </script>
 
@@ -14,11 +14,15 @@ Status: implemented
 
 ## Model
 
-A `pages/**/*.md` file is CommonMark content.
+A `pages/**/*.md` file bearing `ante:layout` is a page
+of CommonMark content.
 It is rendered to HTML (goldmark) first,
 then flows through the normal pipeline —
 parse, `ante:layout` composition, directive walk —
 exactly as an `.html` page would.
+One without `ante:layout` is not a page:
+it passes through verbatim, like any other opaque file
+([/pagedataexample.md](/pagedataexample.md) is one).
 `x.md` renders at `x.html` (so `md/index.md` → `/md/`);
 serve mode resolves a missing `.html` to its `.md` source,
 and never serves the `.md` file itself.

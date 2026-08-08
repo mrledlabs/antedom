@@ -35,8 +35,8 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 10 {
-		t.Errorf("built %d pages, want 10", pages)
+	if pages != 9 {
+		t.Errorf("built %d pages, want 9", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
@@ -91,6 +91,8 @@ func TestDocsSite(t *testing.T) {
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},
+		// No ante:layout: opaque, copied verbatim, absent from the nav.
+		"pagedataexample.md": {"# Page data example"},
 	} {
 		data, err := os.ReadFile(filepath.Join(out, name))
 		if err != nil {
