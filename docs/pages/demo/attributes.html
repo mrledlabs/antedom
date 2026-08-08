@@ -1,0 +1,17 @@
+<template ante:layout="base.html">
+  <template ante:fill="main">
+    <h1>Bound attributes</h1>
+    <p>
+      A child page of <a href="/demo/">the demo</a>: it lives at
+      <code ante:text="page.path"></code>, one directory down,
+      so the sidebar indents it under its parent.
+    </p>
+    <p>
+      Any <code>ante:<em>name</em></code> attribute binds attribute
+      <em>name</em> to its expression's value —
+      <a ante:href="pages[0].path" ante:text="`this link to ${pages[0].title} is bound`">link</a>.
+      A false value drops the attribute entirely
+      (the sidebar's <code>aria-current</code> and indentation work that way).
+    </p>
+  </template>
+</template>

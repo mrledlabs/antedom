@@ -34,7 +34,13 @@ nav {
 }
 nav img { width: 100%; height: auto; }
 nav p { color: var(--muted); }
-nav a { display: block; padding: 0.25rem 0.5rem; color: var(--accent); text-decoration: none; }
+nav a {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  padding-left: calc(0.5rem + var(--depth, 0) * 1rem);
+  color: var(--accent);
+  text-decoration: none;
+}
 nav a[aria-current] { background: var(--accent-bg); font-weight: bold; }
 
 .content { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }

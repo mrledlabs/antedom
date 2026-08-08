@@ -2,7 +2,7 @@
 
 <template ante:fill="main">
 
-# antedom docs
+# docs
 
 antedom renders valid-HTML templates:
 logic in `ante:`-prefixed attributes,

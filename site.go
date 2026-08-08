@@ -9,9 +9,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 // Site is one site definition — where templates live and where data
@@ -52,6 +54,11 @@ func (s *Site) render(w io.Writer, rel string) error {
 		return fmt.Errorf("assembling data: %w", err)
 	}
 	data["page"] = map[string]any{"path": urlPath(rel)}
+	pages, err := s.pageList()
+	if err != nil {
+		return fmt.Errorf("listing pages: %w", err)
+	}
+	data["pages"] = pages
 	engine, err := New()
 	if err != nil {
 		return err
@@ -71,6 +78,61 @@ func (s *Site) parse(path string) (*html.Node, error) {
 		return parseMarkdown(src)
 	}
 	return html.Parse(bytes.NewReader(src))
+}
+
+// pageList walks Pages and returns every page as {path, title, depth},
+// sorted by path, for templates as the pages global (e.g. a nav).
+// A page's title is the text of the first <h1> in its source —
+// pre-composition, pre-render — falling back to its URL path.
+// depth is directory nesting: 0 for top-level pages (an index page
+// counts at its own directory's level, so /demo/ is 0), +1 per
+// directory below that (/demo/attributes.html is 1).
+// Sources are re-parsed per render so serve mode tracks edits.
+func (s *Site) pageList() ([]map[string]any, error) {
+	var pages []map[string]any
+	err := filepath.WalkDir(s.Pages, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		if !strings.HasSuffix(p, ".html") && !strings.HasSuffix(p, ".md") {
+			return nil
+		}
+		rel, err := filepath.Rel(s.Pages, p)
+		if err != nil {
+			return err
+		}
+		doc, err := s.parse(p)
+		if err != nil {
+			return err
+		}
+		u := urlPath(filepath.ToSlash(rel))
+		title := u
+		if h1 := find(doc, func(el *html.Node) bool { return el.DataAtom == atom.H1 }); h1 != nil {
+			title = text(h1)
+		}
+		depth := strings.Count(strings.TrimSuffix(u, "/"), "/") - 1
+		if depth < 0 {
+			depth = 0
+		}
+		pages = append(pages, map[string]any{"path": u, "title": title, "depth": depth})
+		return nil
+	})
+	sort.Slice(pages, func(i, j int) bool {
+		return pages[i]["path"].(string) < pages[j]["path"].(string)
+	})
+	return pages, err
+}
+
+// text returns n's concatenated text content.
+func text(n *html.Node) string {
+	if n.Type == html.TextNode {
+		return n.Data
+	}
+	var b strings.Builder
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		b.WriteString(text(c))
+	}
+	return b.String()
 }
 
 // urlPath maps a page file to its URL path: demo/index.html -> /demo/.

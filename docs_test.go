@@ -35,23 +35,23 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 4 {
-		t.Errorf("built %d pages, want 4", pages)
+	if pages != 7 {
+		t.Errorf("built %d pages, want 7", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
 			"<title>antedom: docs</title>",
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
 			`<a aria-current="page" href="/">docs</a>`, // sidebar marks the page
-			`<a href="/templating.html">templating</a>`,
-			`<h1 id="antedom-docs">antedom docs</h1>`,
+			`<a href="/templating.html">Templating: layouts, slots, fills</a>`, // title from that page's h1
+			`<h1 id="docs">docs</h1>`,
 			`<a href="templating.html">`,
 			"<code>7</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
 		},
 		"templating.html": {
-			"<title>antedom: templating</title>",
-			`<a aria-current="page" href="/templating.html">templating</a>`,
+			"<title>antedom: Templating: layouts, slots, fills</title>",
+			`<a aria-current="page" href="/templating.html">Templating: layouts, slots, fills</a>`,
 			`<h1 id="templating`,
 			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
 		},
@@ -62,6 +62,16 @@ func TestDocsSite(t *testing.T) {
 		"demo/index.html": {
 			"<li>1. ante:if</li>",
 			"<code>/demo/</code>",
+		},
+		"demo/attributes.html": {
+			"<title>antedom: Bound attributes</title>",
+			// A child page: indented under its parent via --depth.
+			`<a aria-current="page" href="/demo/attributes.html" style="--depth: 1">Bound attributes</a>`,
+			"this link to docs is bound",
+		},
+		"subsection/subpage.html": {
+			`<a href="/subsection/">Subsection example</a>`, // section index stays top-level
+			`<a aria-current="page" href="/subsection/subpage.html" style="--depth: 1">Subpage example</a>`,
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},
