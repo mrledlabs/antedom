@@ -41,6 +41,7 @@ func TestDocsSite(t *testing.T) {
 	for name, wants := range map[string][]string{
 		"index.html": {
 			"<title>antedom docs</title>",
+			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
 			`<h1 id="antedom-docs">antedom docs</h1>`,
 			`<a href="templating.html">`,
 			"<code>7</code> directives", // inline directive mid-markdown
@@ -59,6 +60,7 @@ func TestDocsSite(t *testing.T) {
 			"<code>/demo/</code>",
 		},
 		"style.css": {"nav a"},
+		"icon.svg":  {"<svg"},
 	} {
 		data, err := os.ReadFile(filepath.Join(out, name))
 		if err != nil {
