@@ -10,8 +10,9 @@
         <p>an empty post</p>
       </template>
       <nav class="postnav" ante:for="adj of [(() => {
-             const dir = page.path.replace(/[^/]*$/, '');
-             const sibs = pages.filter(p => !p.path.endsWith('/') && p.path.replace(/[^/]*$/, '') === dir);
+             const up = u => u.replace(/[^/]+\/$/, '');
+             const dir = up(page.path);
+             const sibs = pages.filter(p => p.path !== dir && up(p.path) === dir);
              const i = sibs.findIndex(p => p.path === page.path);
              return { newer: sibs[i - 1], older: sibs[i + 1] };
            })()]">

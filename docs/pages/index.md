@@ -20,10 +20,10 @@ These docs are themselves an antedom site —
 markdown pages, composed into `layout/base.html`,
 served with `go run ./cmd/antedom -site docs`.
 
-- [Templating: layouts, slots, fills](templating.html) —
+- [Templating: layouts, slots, fills](templating/) —
   base templates, inheritance, and content pages
   via `ante:layout` / `ante:slot` / `ante:fill`.
-- [Markdown pages](markdown.html) —
+- [Markdown pages](markdown/) —
   `pages/**/*.md` as CommonMark content,
   `ante:` machinery as raw HTML, layouts and directives unchanged.
 - [sampleblog](sampleblog/) —

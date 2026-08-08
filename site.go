@@ -23,10 +23,10 @@ import (
 // directory, Handler renders pages per request. Both share render.
 type Site struct {
 	// Pages is a directory tree: *.html and *.md files bearing an
-	// ante:layout element are page templates — each renders at its
-	// own relative path, .md at its .html path — and every other
-	// file (a layout-less .html or .md included) passes through
-	// verbatim.
+	// ante:layout element are page templates — each renders to an
+	// index.html in its URL directory (see urlPath) — and every
+	// other file (a layout-less .html or .md included) passes
+	// through verbatim.
 	Pages string
 	// Layout is a directory of layout templates, named by ante:layout
 	// attributes (see docs/templating.md); empty disables composition.
@@ -310,21 +310,25 @@ func text(n *html.Node) string {
 	return b.String()
 }
 
-// urlPath maps a page file to its URL path: demo/index.html -> /demo/.
+// urlPath maps a page file to its URL: every page renders to an
+// index.html in its own directory, so demo/index.html -> /demo/ and
+// templating.md -> /templating/.
 func urlPath(rel string) string {
-	if strings.HasSuffix(rel, ".md") {
-		rel = strings.TrimSuffix(rel, ".md") + ".html"
+	rel = strings.TrimSuffix(rel, ".md")
+	rel = strings.TrimSuffix(rel, ".html")
+	if rel == "index" || strings.HasSuffix(rel, "/index") {
+		rel = strings.TrimSuffix(rel, "index")
 	}
-	p := "/" + strings.TrimSuffix(rel, "index.html")
-	if strings.HasSuffix(p, ".html") || strings.HasSuffix(p, "/") {
-		return p
+	if rel != "" && !strings.HasSuffix(rel, "/") {
+		rel += "/"
 	}
-	return p + "/"
+	return "/" + rel
 }
 
-// Build renders the whole site into out, mirroring the Pages tree.
-// It returns the number of pages rendered (passthrough files not
-// counted).
+// Build renders the whole site into out: every page becomes an
+// index.html in its URL directory (see urlPath), opaque files copy
+// verbatim at their own paths. It returns the number of pages
+// rendered (opaque files not counted).
 func (s *Site) Build(out string) (int, error) {
 	pages := 0
 	err := filepath.WalkDir(s.Pages, func(p string, d fs.DirEntry, err error) error {
@@ -336,16 +340,17 @@ func (s *Site) Build(out string) (int, error) {
 			return err
 		}
 		dst := filepath.Join(out, rel)
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return err
-		}
 		if ok, err := s.isPage(p); err != nil {
 			return err
 		} else if !ok {
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+				return err
+			}
 			return copyFile(dst, p)
 		}
-		if strings.HasSuffix(p, ".md") {
-			dst = strings.TrimSuffix(dst, ".md") + ".html"
+		dst = filepath.Join(out, filepath.FromSlash(urlPath(filepath.ToSlash(rel))), "index.html")
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
 		}
 		f, err := os.Create(dst)
 		if err != nil {
@@ -362,11 +367,13 @@ func (s *Site) Build(out string) (int, error) {
 }
 
 // Handler serves the site per request: a trailing slash (or an
-// extensionless path) resolves to its index.html, a page renders
-// (from the .html template, or its .md source when absent), and
-// everything else — layout-less .html and .md included — is served
-// verbatim. Page-source .md is never served. Mount under a prefix
-// with http.StripPrefix.
+// extensionless path) resolves to its index.html, and a page URL /x/
+// renders from the first source that owns it — x/index.html,
+// x/index.md, x.html, then x.md (see urlPath). A page template
+// requested at its own file path redirects to its URL; everything
+// else — layout-less .html and .md included — is served verbatim.
+// Page-source .md is never served. Mount under a prefix with
+// http.StripPrefix.
 func (s *Site) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
@@ -374,41 +381,58 @@ func (s *Site) Handler() http.Handler {
 			rel = path.Join(rel, "index.html")
 		}
 		file := filepath.Join(s.Pages, filepath.FromSlash(rel))
-		if ok, err := s.isPage(file); err != nil && !os.IsNotExist(err) {
+		ok, err := s.isPage(file)
+		if err != nil && !os.IsNotExist(err) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		} else if err == nil && !ok {
-			http.ServeFile(w, r, file)
+		}
+		if err == nil && !ok {
+			http.ServeFile(w, r, file) // opaque file: verbatim
 			return
 		}
+		// From here rel is a page file or missing altogether.
 		if strings.HasSuffix(rel, ".md") {
-			// Markdown page source; it renders at the .html path.
+			// Markdown page source; the page lives at its URL.
 			http.NotFound(w, r)
 			return
 		}
-		// Render to a buffer so an error returns a clean 500
-		// instead of trailing a half-written page.
-		var buf bytes.Buffer
-		err := s.render(&buf, rel)
-		if os.IsNotExist(err) {
-			// A missing .html falls back to its .md source, but only
-			// when that source is itself a page.
-			md := strings.TrimSuffix(rel, ".html") + ".md"
-			if ok, mdErr := s.isPage(filepath.Join(s.Pages, filepath.FromSlash(md))); mdErr == nil && ok {
-				buf.Reset()
-				err = s.render(&buf, md)
+		if path.Base(rel) != "index.html" {
+			if err != nil { // no such .html; its .md source still owns the URL
+				md := strings.TrimSuffix(rel, ".html") + ".md"
+				ok, _ = s.isPage(filepath.Join(s.Pages, filepath.FromSlash(md)))
 			}
-		}
-		if err != nil {
-			if os.IsNotExist(err) {
+			if ok {
+				// A page template's own path; the page lives at its URL.
+				http.Redirect(w, r, urlPath(rel), http.StatusMovedPermanently)
+			} else {
 				http.NotFound(w, r)
-				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(buf.Bytes())
+		sources := []string{rel, strings.TrimSuffix(rel, ".html") + ".md"}
+		if dir := path.Dir(rel); dir != "." {
+			sources = append(sources, dir+".html", dir+".md")
+		}
+		for _, src := range sources {
+			if ok, err := s.isPage(filepath.Join(s.Pages, filepath.FromSlash(src))); err != nil || !ok {
+				if err != nil && !os.IsNotExist(err) {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				continue
+			}
+			// Render to a buffer so an error returns a clean 500
+			// instead of trailing a half-written page.
+			var buf bytes.Buffer
+			if err := s.render(&buf, src); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(buf.Bytes())
+			return
+		}
+		http.NotFound(w, r)
 	})
 }
 

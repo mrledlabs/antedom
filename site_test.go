@@ -22,6 +22,9 @@ func demoSite(t *testing.T) *Site {
 		// verbatim, directives and all, and absent from pages.
 		"sub/raw.html": `<p ante:text="title">opaque</p>`,
 		"notes.md":     "# just notes\n",
+		// A non-index page: renders to leaf/index.html, URL /leaf/.
+		"leaf.md": "<template ante:layout=\"default.html\">\n\n" +
+			"<template ante:fill=\"main\">\n\nA *leaf* page.\n\n</template>\n\n</template>\n",
 		// A markdown page through the full pipeline: layout/fill
 		// as raw HTML blocks, markdown between the blank lines,
 		// an inline directive mid-paragraph.
@@ -57,16 +60,17 @@ func TestSiteBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 3 {
-		t.Errorf("built %d pages, want 3", pages)
+	if pages != 4 {
+		t.Errorf("built %d pages, want 4", pages)
 	}
 	for name, want := range map[string]string{
-		"index.html":     "<h1>hi</h1>",
-		"sub/index.html": "<p>/sub/</p>",
-		"sub/plain.txt":  "passthrough",
-		"sub/raw.html":   `<p ante:text="title">opaque</p>`, // verbatim, unrendered
-		"notes.md":       "# just notes",                    // verbatim, still .md
-		"md/index.html":  `<h1 id="hi-there">Hi <em>there</em></h1>`,
+		"index.html":      "<h1>hi</h1>",
+		"sub/index.html":  "<p>/sub/</p>",
+		"sub/plain.txt":   "passthrough",
+		"sub/raw.html":    `<p ante:text="title">opaque</p>`, // verbatim, unrendered
+		"notes.md":        "# just notes",                    // verbatim, still .md
+		"leaf/index.html": "A <em>leaf</em> page.",           // non-index page, pretty URL
+		"md/index.html":   `<h1 id="hi-there">Hi <em>there</em></h1>`,
 	} {
 		data, err := os.ReadFile(filepath.Join(out, name))
 		if err != nil {
@@ -78,6 +82,9 @@ func TestSiteBuild(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(out, "notes.html")); err == nil {
 		t.Error("notes.html built; opaque markdown should not render")
+	}
+	if _, err := os.Stat(filepath.Join(out, "leaf.html")); err == nil {
+		t.Error("leaf.html built; pages render only at their URL directory")
 	}
 }
 
@@ -151,8 +158,9 @@ func TestSiteHandler(t *testing.T) {
 		"/sub/plain.txt": "passthrough",
 		"/sub/raw.html":  `<p ante:text="title">opaque</p>`, // opaque: verbatim
 		"/notes.md":      "# just notes",                    // opaque: raw markdown served
+		"/leaf/":         "A <em>leaf</em> page.",           // non-index page at its pretty URL
 		"/md/":           "<p>On <span>/md/</span> today.</p>",
-		"/md/index.html": `<h1 id="hi-there">Hi <em>there</em></h1>`, // .html falls back to .md source
+		"/md/index.html": `<h1 id="hi-there">Hi <em>there</em></h1>`, // URL's own .md source renders
 	} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", url, nil))
@@ -161,8 +169,14 @@ func TestSiteHandler(t *testing.T) {
 			t.Errorf("%s: code %d, missing %q in %s", url, rec.Code, want, body)
 		}
 	}
+	// A page template's own path redirects to its URL.
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/leaf.html", nil))
+	if loc := rec.Result().Header.Get("Location"); rec.Code != 301 || loc != "/leaf/" {
+		t.Errorf("/leaf.html: code %d location %q, want 301 /leaf/", rec.Code, loc)
+	}
 	// Page-source .md is never served, and opaque .md renders nowhere.
-	for _, url := range []string{"/nope/", "/md/index.md", "/notes.html"} {
+	for _, url := range []string{"/nope/", "/md/index.md", "/leaf.md", "/notes.html"} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", url, nil))
 		if rec.Code != 404 {

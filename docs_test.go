@@ -35,27 +35,27 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 9 {
-		t.Errorf("built %d pages, want 9", pages)
+	if pages != 10 {
+		t.Errorf("built %d pages, want 10", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
 			"<title>antedom: antedom</title>",
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
 			`<a aria-current="page" href="/">antedom</a>`, // sidebar marks the page
-			`<a href="/templating.html">Templating</a>`,   // title from that page's metadata
+			`<a href="/templating/">Templating</a>`,       // title from that page's metadata
 			"<h1>antedom</h1>",                            // the layout renders the metadata title
-			`<a href="templating.html">`,
+			`<a href="templating/">`,
 			"<code>7</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
 		},
-		"templating.html": {
+		"templating/index.html": {
 			"<title>antedom: Templating</title>",
-			`<a aria-current="page" href="/templating.html">Templating</a>`,
+			`<a aria-current="page" href="/templating/">Templating</a>`,
 			"<h1>Templating</h1>",
 			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
 		},
-		"markdown.html": {
+		"markdown/index.html": {
 			"<h1>Markdown pages</h1>",
 			"<code>`&lt;div&gt;`</code>", // inline code keeps tags
 		},
@@ -63,36 +63,37 @@ func TestDocsSite(t *testing.T) {
 			"<li>1. ante:if</li>",
 			"<code>/demo/</code>",
 		},
-		"demo/attributes.html": {
+		"demo/attributes/index.html": {
 			"<title>antedom: Bound attributes</title>",
 			// A child page: indented under its parent via --depth.
-			`<a aria-current="page" href="/demo/attributes.html" style="--depth: 1">Bound attributes</a>`,
+			`<a aria-current="page" href="/demo/attributes/" style="--depth: 1">Bound attributes</a>`,
 			"this link to antedom is bound",
 		},
 		"sampleblog/index.html": {
 			// The post list: ante:for over the pages global, in order.
-			"<a href=\"/sampleblog/third-post.html\">Third post</a>\n    — <time>2026-08-01</time>",
+			"<a href=\"/sampleblog/third-post/\">Third post</a>\n    — <time>2026-08-01</time>",
 		},
-		"sampleblog/first-post.html": {
+		"sampleblog/first-post/index.html": {
 			"<title>antedom: First post</title>",
 			"<time>2026-06-10</time>", // byline date via page.date
-			`<a aria-current="page" href="/sampleblog/first-post.html" style="--depth: 1">First post</a>`,
-			`<a href="/sampleblog/second-post.html">← Second post</a>`,
+			`<a aria-current="page" href="/sampleblog/first-post/" style="--depth: 1">First post</a>`,
+			`<a href="/sampleblog/second-post/">← Second post</a>`,
 			"<a>older →</a>", // oldest post: no href, disabled
 		},
-		"sampleblog/second-post.html": {
+		"sampleblog/second-post/index.html": {
 			"<span>· by A. N. Author</span>", // byline author from page.params
-			`<a href="/sampleblog/third-post.html">← Third post</a>`,
-			`<a href="/sampleblog/first-post.html">First post →</a>`,
+			`<a href="/sampleblog/third-post/">← Third post</a>`,
+			`<a href="/sampleblog/first-post/">First post →</a>`,
 		},
-		"sampleblog/third-post.html": {
+		"sampleblog/third-post/index.html": {
 			"<a>← newer</a>", // newest post: no href, disabled
-			`<a href="/sampleblog/second-post.html">Second post →</a>`,
+			`<a href="/sampleblog/second-post/">Second post →</a>`,
 		},
-		"style.css": {"nav a"},
-		"icon.svg":  {"<svg"},
+		"pages/index.html": {"<h1>Pages</h1>"},
+		"style.css":        {"nav a"},
+		"icon.svg":         {"<svg"},
 		// No ante:layout: opaque, copied verbatim, absent from the nav.
-		"pagedataexample.md": {"# Page data example"},
+		"pages/non-page-example.md": {"# Non-page Markdown file example"},
 	} {
 		data, err := os.ReadFile(filepath.Join(out, name))
 		if err != nil {
@@ -118,10 +119,10 @@ func TestDocsSite(t *testing.T) {
 	}
 	last := -1
 	for _, href := range []string{
-		`href="/"`, `href="/templating.html"`, `href="/markdown.html"`,
-		`href="/demo/"`, `href="/demo/attributes.html"`, `href="/sampleblog/"`,
-		`href="/sampleblog/third-post.html"`, `href="/sampleblog/second-post.html"`,
-		`href="/sampleblog/first-post.html"`,
+		`href="/"`, `href="/templating/"`, `href="/pages/"`, `href="/markdown/"`,
+		`href="/demo/"`, `href="/demo/attributes/"`, `href="/sampleblog/"`,
+		`href="/sampleblog/third-post/"`, `href="/sampleblog/second-post/"`,
+		`href="/sampleblog/first-post/"`,
 	} {
 		i := strings.Index(string(nav), href)
 		if i < 0 || i < last {

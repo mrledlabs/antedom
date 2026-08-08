@@ -22,10 +22,10 @@ parse, `ante:layout` composition, directive walk —
 exactly as an `.html` page would.
 One without `ante:layout` is not a page:
 it passes through verbatim, like any other opaque file
-([/pagedataexample.md](/pagedataexample.md) is one).
-`x.md` renders at `x.html` (so `md/index.md` → `/md/`);
-serve mode resolves a missing `.html` to its `.md` source,
-and never serves the `.md` file itself.
+([/pages/non-page-example.md](/pages/non-page-example.md) is one).
+Every page renders to an `index.html` in its own directory,
+so `x.md` serves at `/x/` and `md/index.md` at `/md/`;
+the `.md` file itself is never served.
 Layouts stay `.html`.
 
 All `ante:` machinery — layout/fill templates,
