@@ -3,8 +3,14 @@
     https://danmarshall.github.io/google-font-to-svg-path/
     -->
 <svg width="175" height="62.5" viewBox="0 0 175 62.5" xmlns="http://www.w3.org/2000/svg">
-  <g id="svgGroup" stroke-linecap="round" fill-rule="nonzero" font-size="9pt" stroke="#000000"
-    stroke-width="0.25mm" fill="#000000" style="stroke:#000000;stroke-width:0.25mm;fill:#000000">
+  <style>
+    g { fill: #000; stroke: #000; }
+    @media (prefers-color-scheme: dark) {
+      g { fill: #fff; stroke: #fff; }
+    }
+  </style>
+  <g id="svgGroup" stroke-linecap="round" fill-rule="nonzero" font-size="9pt"
+    stroke-width="0.25mm">
     <path
       d="M 75 62.5 L 62.5 62.5 L 62.5 12.5 L 75 12.5 L 75 0 L 100 0 L 100 12.5 L 112.5 12.5 L 112.5 62.5 L 100 62.5 L 100 37.5 L 75 37.5 L 75 62.5 Z M 75 13 L 75 25 L 100 25 L 100 13 L 75 13 Z M 12.5 25 L 12.5 37.5 L 25 37.5 L 25 50 L 37.5 50 L 37.5 62.5 L 25 62.5 L 25 50 L 12.5 50 L 12.5 37.5 L 0 37.5 L 0 25 L 12.5 25 Z M 175 37.5 L 162.5 37.5 L 162.5 25 L 150 25 L 150 12.5 L 137.5 12.5 L 137.5 0 L 150 0 L 150 12.5 L 162.5 12.5 L 162.5 25 L 175 25 L 175 37.5 Z M 37.5 12.5 L 25 12.5 L 25 0 L 37.5 0 L 37.5 12.5 Z M 25 12.5 L 25 25 L 12.5 25 L 12.5 12.5 L 25 12.5 Z M 162.5 37.5 L 162.5 50 L 150 50 L 150 37.5 L 162.5 37.5 Z M 150 50 L 150 62.5 L 137.5 62.5 L 137.5 50 L 150 50 Z"
       vector-effect="non-scaling-stroke" />
