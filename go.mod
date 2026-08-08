@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/grafana/sobek v0.0.0-20260727154728-7781506a890f
+	github.com/yuin/goldmark v1.8.5
 	golang.org/x/net v0.57.0
 )
 

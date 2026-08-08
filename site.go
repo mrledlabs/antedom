@@ -19,7 +19,8 @@ import (
 // directory, Handler renders pages per request. Both share render.
 type Site struct {
 	// Pages is a directory tree of page templates: each *.html file
-	// renders at its own relative path, other files pass through.
+	// renders at its own relative path, each *.md file is markdown
+	// content rendering at its .html path, other files pass through.
 	Pages string
 	// Layout is a directory of layout templates, named by ante:layout
 	// attributes (see docs/templating.md); empty disables composition.
@@ -66,11 +67,17 @@ func (s *Site) parse(path string) (*html.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	if strings.HasSuffix(path, ".md") {
+		return parseMarkdown(src)
+	}
 	return html.Parse(bytes.NewReader(src))
 }
 
 // urlPath maps a page file to its URL path: demo/index.html -> /demo/.
 func urlPath(rel string) string {
+	if strings.HasSuffix(rel, ".md") {
+		rel = strings.TrimSuffix(rel, ".md") + ".html"
+	}
 	p := "/" + strings.TrimSuffix(rel, "index.html")
 	if strings.HasSuffix(p, ".html") || strings.HasSuffix(p, "/") {
 		return p
@@ -95,7 +102,9 @@ func (s *Site) Build(out string) (int, error) {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
-		if !strings.HasSuffix(p, ".html") {
+		if strings.HasSuffix(p, ".md") {
+			dst = strings.TrimSuffix(dst, ".md") + ".html"
+		} else if !strings.HasSuffix(p, ".html") {
 			return copyFile(dst, p)
 		}
 		f, err := os.Create(dst)
@@ -113,7 +122,8 @@ func (s *Site) Build(out string) (int, error) {
 }
 
 // Handler serves the site per request: a trailing slash (or an
-// extensionless path) resolves to its index.html, .html renders,
+// extensionless path) resolves to its index.html, .html renders
+// (from the .html template, or its .md source when absent),
 // everything else is served verbatim. Mount under a prefix with
 // http.StripPrefix.
 func (s *Site) Handler() http.Handler {
@@ -122,6 +132,11 @@ func (s *Site) Handler() http.Handler {
 		if rel == "" || !strings.Contains(path.Base(rel), ".") {
 			rel = path.Join(rel, "index.html")
 		}
+		if strings.HasSuffix(rel, ".md") {
+			// Markdown is page source; it renders at the .html path.
+			http.NotFound(w, r)
+			return
+		}
 		if !strings.HasSuffix(rel, ".html") {
 			http.ServeFile(w, r, filepath.Join(s.Pages, filepath.FromSlash(rel)))
 			return
@@ -129,7 +144,12 @@ func (s *Site) Handler() http.Handler {
 		// Render to a buffer so an error returns a clean 500
 		// instead of trailing a half-written page.
 		var buf bytes.Buffer
-		if err := s.render(&buf, rel); err != nil {
+		err := s.render(&buf, rel)
+		if os.IsNotExist(err) {
+			buf.Reset()
+			err = s.render(&buf, strings.TrimSuffix(rel, ".html")+".md")
+		}
+		if err != nil {
 			if os.IsNotExist(err) {
 				http.NotFound(w, r)
 				return

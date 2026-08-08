@@ -10,3 +10,6 @@ The directive reference lives in the package doc comment
 - [Templating: layouts, slots, fills](templating.md) —
   base templates, inheritance, and content pages
   via `ante:layout` / `ante:slot` / `ante:fill`.
+- [Markdown pages](markdown.md) —
+  `pages/**/*.md` as CommonMark content,
+  `ante:` machinery as raw HTML, layouts and directives unchanged.
