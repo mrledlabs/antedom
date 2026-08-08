@@ -9,7 +9,6 @@
 <body>
   <nav>
     <img src="/icon.svg" alt="antedom">
-    <p ante:text="`antedom: ${page.title}`">antedom</p>
     <a ante:for="p of pages"
        ante:href="p.path"
        ante:style="p.depth ? `--depth: ${p.depth}` : false"
@@ -17,6 +16,7 @@
        ante:text="p.title">page</a>
   </nav>
   <div class="content">
+    <h1 ante:text="page.title">title</h1>
     <main ante:slot="main">
       <p>nothing here yet</p>
     </main>

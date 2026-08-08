@@ -2,13 +2,12 @@
 
 <script ante:meta type="application/json">
 {
+  "title": "antedom",
   "weight": 1
 }
 </script>
 
 <template ante:fill="main">
-
-# docs
 
 antedom renders valid-HTML templates:
 logic in `ante:`-prefixed attributes,

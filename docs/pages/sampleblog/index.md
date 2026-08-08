@@ -1,8 +1,12 @@
 <template ante:layout="base.html">
 
-<template ante:fill="main">
+<script ante:meta type="application/json">
+{
+  "title": "sampleblog"
+}
+</script>
 
-# sampleblog
+<template ante:fill="main">
 
 Example posts ordered by date.
 Each post sets `date` in its page metadata —

@@ -44,7 +44,7 @@ func TestDocsSite(t *testing.T) {
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
 			`<a aria-current="page" href="/">docs</a>`,                         // sidebar marks the page
 			`<a href="/templating.html">Templating: layouts, slots, fills</a>`, // title from that page's h1
-			`<h1 id="docs">docs</h1>`,
+			"<h1>docs</h1>", // the layout renders the metadata title
 			`<a href="templating.html">`,
 			"<code>7</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
@@ -52,11 +52,11 @@ func TestDocsSite(t *testing.T) {
 		"templating.html": {
 			"<title>antedom: Templating: layouts, slots, fills</title>",
 			`<a aria-current="page" href="/templating.html">Templating: layouts, slots, fills</a>`,
-			`<h1 id="templating`,
+			"<h1>Templating: layouts, slots, fills</h1>",
 			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
 		},
 		"markdown.html": {
-			`<h1 id="markdown-pages">Markdown pages</h1>`,
+			"<h1>Markdown pages</h1>",
 			"<code>`&lt;div&gt;`</code>", // inline code keeps tags
 		},
 		"demo/index.html": {

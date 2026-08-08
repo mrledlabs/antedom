@@ -2,13 +2,12 @@
 
 <script ante:meta type="application/json">
 {
+  "title": "Markdown pages",
   "weight": 3
 }
 </script>
 
 <template ante:fill="main">
-
-# Markdown pages
 
 Status: implemented
 (`parseMarkdown` in `markdown.go`; `.md` handling in `site.go`).
@@ -32,8 +31,10 @@ Goldmark passes raw HTML through verbatim
 (pages are trusted input),
 so directives survive to the walk untouched.
 
-There is no frontmatter:
-page data comes from `data/`, as everywhere in antedom.
+Frontmatter is a `<script ante:meta>` JSON element
+in the page source, markdown or not
+(see [sampleblog](/sampleblog/));
+site-wide data comes from `data/`, as everywhere in antedom.
 
 ## CommonMark blank lines required
 

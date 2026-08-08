@@ -2,16 +2,14 @@
 
 <script ante:meta type="application/json">
 {
+  "title": "Templating",
   "weight": 2
 }
 </script>
 
 <template ante:fill="main">
 
-# Templating: layouts, slots, fills
-
-Status: implemented
-(`Compose` in `layout.go`; the docs site in `docs/` uses it).
+How to use the antedom template system: layouts, slots, and fills.
 
 ## Model
 

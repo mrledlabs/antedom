@@ -94,7 +94,7 @@ func (s *Site) parse(path string) (*html.Node, error) {
 // anywhere in the page source, its body one JSON object allowing
 // exactly these keys (anything else is a build error):
 //
-//	title  string — overrides the title derived from the first <h1>
+//	title  string — the page's title
 //	weight number — sibling sort order (see pageInfo.before)
 //	date   string — RFC 3339: a date (2006-01-02) or full timestamp
 //	params object — free-form values for the site's own use
@@ -182,9 +182,8 @@ func (a *pageInfo) before(b *pageInfo) bool {
 // pageList walks Pages and returns every page as
 // {path, title, depth, date?, weight?, params?}, for templates as the
 // pages global (e.g. a nav). All but path and depth come from the
-// page's metadata (see pageMeta); a missing title falls back to the first
-// <h1> in the page source — pre-composition, pre-render — then to
-// the URL path. depth is directory nesting: 0 for top-level pages
+// page's metadata (see pageMeta); a missing title falls back to the
+// URL path. depth is directory nesting: 0 for top-level pages
 // (an index page counts at its own directory's level, so /demo/ is
 // 0), +1 per directory below that (/demo/attributes.html is 1).
 // Order is hierarchical: siblings sort by before, and a section's
@@ -218,9 +217,6 @@ func (s *Site) pageList() ([]map[string]any, error) {
 		}
 		if info.title == "" {
 			info.title = u
-			if h1 := find(doc, func(el *html.Node) bool { return el.DataAtom == atom.H1 }); h1 != nil {
-				info.title = text(h1)
-			}
 		}
 		groups[groupOf(u)] = append(groups[groupOf(u)], info)
 		return nil
