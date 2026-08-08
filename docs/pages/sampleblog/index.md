@@ -2,7 +2,7 @@
 
 <script ante:meta type="application/json">
 {
-  "title": "sampleblog"
+  "title": "Sample blog"
 }
 </script>
 
