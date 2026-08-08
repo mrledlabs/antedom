@@ -1,7 +1,11 @@
+<template ante:layout="base.html">
+
+<template ante:fill="main">
+
 # Templating: layouts, slots, fills
 
 Status: implemented
-(`Compose` in `layout.go`; the demo site in `antedom/` uses it).
+(`Compose` in `layout.go`; the docs site in `docs/` uses it).
 
 ## Model
 
@@ -199,3 +203,7 @@ A page filling nothing would get every fallback.
   a tokenizer-based lint could come later.
 - No `<slot>` element or `slot=` attribute support:
   one spelling, the `ante:` attributes.
+
+</template>
+
+</template>

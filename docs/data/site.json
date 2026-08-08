@@ -1,0 +1,12 @@
+{
+  "title": "antedom docs",
+  "directives": [
+    "ante:if",
+    "ante:for",
+    "ante:text",
+    "ante:html",
+    "ante:name bound attributes",
+    "ante:layout / ante:slot / ante:fill",
+    "markdown pages"
+  ]
+}

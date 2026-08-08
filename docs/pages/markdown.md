@@ -1,3 +1,7 @@
+<template ante:layout="base.html">
+
+<template ante:fill="main">
+
 # Markdown pages
 
 Status: implemented
@@ -48,4 +52,16 @@ I would have liked to avoid this, but the implementation was too complex, at lea
 - **Heading anchors.** Headings get slugified `id`s
   (`## Hello World` → `id="hello-world"`).
 
-##
+## Example site
+
+These docs are the example site:
+every page under `docs/pages/` — this file included —
+is a markdown page wrapped in layout/fill templates,
+composed into `docs/layout/base.html`
+with data from `docs/data/site.json`.
+Serve with `go run ./cmd/antedom -site docs`;
+`TestDocsSite` builds it in the normal test run.
+
+</template>
+
+</template>

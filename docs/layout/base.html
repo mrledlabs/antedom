@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title ante:text="data.site.title">antedom</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/">docs</a>
+    <a href="/templating.html">templating</a>
+    <a href="/markdown.html">markdown</a>
+    <a href="/demo/">demo</a>
+  </nav>
+  <main ante:slot="main">
+    <p>nothing here yet</p>
+  </main>
+  <footer ante:text="`rendered ${now}`">timestamp</footer>
+</body>
+</html>

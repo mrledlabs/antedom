@@ -1,0 +1,17 @@
+<template ante:layout="base.html">
+  <template ante:fill="main">
+    <h1>Directive demo</h1>
+    <p>
+      A plain-HTML page in the docs site:
+      same layout and data as the markdown pages.
+    </p>
+    <ul>
+      <li ante:for="d, i of data.site.directives" ante:text="`${i + 1}. ${d}`"></li>
+    </ul>
+    <p ante:if="data.site.directives.length > 0">
+      That list is an <code>ante:for</code> over <code>data/site.json</code>;
+      this paragraph is toggled by <code>ante:if</code>;
+      this page lives at <code ante:text="page.path"></code>.
+    </p>
+  </template>
+</template>

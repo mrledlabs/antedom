@@ -1,0 +1,4 @@
+body { max-width: 40rem; margin: 2rem auto; font-family: system-ui, sans-serif; line-height: 1.5; }
+nav a { margin-right: 1rem; }
+.callout { border-left: 4px solid steelblue; padding: 0 1rem; background: #f0f6fa; }
+footer { margin-top: 3rem; color: #666; font-size: 0.9rem; }
