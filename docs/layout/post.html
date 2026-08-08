@@ -1,0 +1,25 @@
+<template ante:layout="base.html">
+  <template ante:fill="main">
+    <article class="post">
+      <p class="byline">
+        <time ante:if="page.date" ante:text="page.date">date</time>
+        <span ante:if="page.params && page.params.author"
+              ante:text="`· by ${page.params.author}`">author</span>
+      </p>
+      <template ante:slot="post">
+        <p>an empty post</p>
+      </template>
+      <nav class="postnav" ante:for="adj of [(() => {
+             const dir = page.path.replace(/[^/]*$/, '');
+             const sibs = pages.filter(p => !p.path.endsWith('/') && p.path.replace(/[^/]*$/, '') === dir);
+             const i = sibs.findIndex(p => p.path === page.path);
+             return { newer: sibs[i - 1], older: sibs[i + 1] };
+           })()]">
+        <a ante:href="adj.newer ? adj.newer.path : false"
+           ante:text="adj.newer ? `← ${adj.newer.title}` : '← newer'">newer</a>
+        <a ante:href="adj.older ? adj.older.path : false"
+           ante:text="adj.older ? `${adj.older.title} →` : 'older →'">older</a>
+      </nav>
+    </article>
+  </template>
+</template>

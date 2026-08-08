@@ -1,4 +1,4 @@
-<template ante:layout="base.html">
+<template ante:layout="post.html">
 
 <script ante:meta type="application/json">
 {
@@ -7,7 +7,7 @@
 }
 </script>
 
-<template ante:fill="main">
+<template ante:fill="post">
 
 The newest post, dated <time ante:text="page.date">date</time>,
 so it lists first in the section.

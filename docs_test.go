@@ -35,24 +35,24 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 9 {
-		t.Errorf("built %d pages, want 9", pages)
+	if pages != 10 {
+		t.Errorf("built %d pages, want 10", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
-			"<title>antedom: docs</title>",
+			"<title>antedom: antedom</title>",
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
-			`<a aria-current="page" href="/">docs</a>`,                         // sidebar marks the page
-			`<a href="/templating.html">Templating: layouts, slots, fills</a>`, // title from that page's h1
-			"<h1>docs</h1>", // the layout renders the metadata title
+			`<a aria-current="page" href="/">antedom</a>`, // sidebar marks the page
+			`<a href="/templating.html">Templating</a>`,   // title from that page's metadata
+			"<h1>antedom</h1>",                            // the layout renders the metadata title
 			`<a href="templating.html">`,
 			"<code>7</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
 		},
 		"templating.html": {
-			"<title>antedom: Templating: layouts, slots, fills</title>",
-			`<a aria-current="page" href="/templating.html">Templating: layouts, slots, fills</a>`,
-			"<h1>Templating: layouts, slots, fills</h1>",
+			"<title>antedom: Templating</title>",
+			`<a aria-current="page" href="/templating.html">Templating</a>`,
+			"<h1>Templating</h1>",
 			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
 		},
 		"markdown.html": {
@@ -67,7 +67,7 @@ func TestDocsSite(t *testing.T) {
 			"<title>antedom: Bound attributes</title>",
 			// A child page: indented under its parent via --depth.
 			`<a aria-current="page" href="/demo/attributes.html" style="--depth: 1">Bound attributes</a>`,
-			"this link to docs is bound",
+			"this link to antedom is bound",
 		},
 		"sampleblog/index.html": {
 			// The post list: ante:for over the pages global, in order.
@@ -75,11 +75,19 @@ func TestDocsSite(t *testing.T) {
 		},
 		"sampleblog/first-post.html": {
 			"<title>antedom: First post</title>",
-			"<time>2026-06-10</time>", // page.date from metadata
+			"<time>2026-06-10</time>", // byline date via page.date
 			`<a aria-current="page" href="/sampleblog/first-post.html" style="--depth: 1">First post</a>`,
+			`<a href="/sampleblog/second-post.html">← Second post</a>`,
+			"<a>older →</a>", // oldest post: no href, disabled
 		},
 		"sampleblog/second-post.html": {
-			"<span>A. N. Author</span>", // page.params, free-form metadata
+			"<span>· by A. N. Author</span>", // byline author from page.params
+			`<a href="/sampleblog/third-post.html">← Third post</a>`,
+			`<a href="/sampleblog/first-post.html">First post →</a>`,
+		},
+		"sampleblog/third-post.html": {
+			"<a>← newer</a>", // newest post: no href, disabled
+			`<a href="/sampleblog/second-post.html">Second post →</a>`,
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},

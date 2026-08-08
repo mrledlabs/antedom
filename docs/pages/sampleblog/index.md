@@ -17,6 +17,10 @@ so dates decide the order, newest first.
 Metadata allows `title`, `weight`, `date`, and `params` —
 anything else is a build error.
 
+Posts use their own layout — `layout/post.html`,
+chained through `base.html` — adding a byline
+and newer/older links computed from the `pages` global.
+
 <ul>
   <li ante:for="p of pages.filter(q => q.path.startsWith('/sampleblog/') && q.path !== page.path)">
     <a ante:href="p.path" ante:text="p.title">post</a>
