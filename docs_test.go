@@ -40,14 +40,18 @@ func TestDocsSite(t *testing.T) {
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
-			"<title>antedom docs</title>",
+			"<title>antedom: docs</title>",
 			`<link rel="icon" href="/icon.svg" type="image/svg+xml"/>`,
+			`<a aria-current="page" href="/">docs</a>`, // sidebar marks the page
+			`<a href="/templating.html">templating</a>`,
 			`<h1 id="antedom-docs">antedom docs</h1>`,
 			`<a href="templating.html">`,
 			"<code>7</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
 		},
 		"templating.html": {
+			"<title>antedom: templating</title>",
+			`<a aria-current="page" href="/templating.html">templating</a>`,
 			`<h1 id="templating`,
 			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
 		},

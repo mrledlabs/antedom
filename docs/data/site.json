@@ -1,5 +1,10 @@
 {
-  "title": "antedom docs",
+  "pages": [
+    { "path": "/", "title": "docs" },
+    { "path": "/templating.html", "title": "templating" },
+    { "path": "/markdown.html", "title": "markdown" },
+    { "path": "/demo/", "title": "demo" }
+  ],
   "directives": [
     "ante:if",
     "ante:for",

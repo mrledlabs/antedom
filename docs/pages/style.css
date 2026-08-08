@@ -1,4 +1,43 @@
-body { max-width: 40rem; margin: 2rem auto; font-family: system-ui, sans-serif; line-height: 1.5; }
-nav a { margin-right: 1rem; }
-.callout { border-left: 4px solid steelblue; padding: 0 1rem; background: #f0f6fa; }
-footer { margin-top: 3rem; color: #666; font-size: 0.9rem; }
+:root {
+  --bg: #fff;
+  --fg: #222;
+  --muted: #666;
+  --accent: steelblue;
+  --accent-bg: #f0f6fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181a;
+    --fg: #ddd;
+    --muted: #999;
+    --accent: #7cabd4;
+    --accent-bg: #21313e;
+  }
+}
+
+body {
+  margin: 0;
+  display: flex;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+nav {
+  min-width: 11rem;
+  padding: 2rem 1rem;
+  border-right: 1px solid var(--accent-bg);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+}
+nav img { width: 100%; height: auto; }
+nav p { color: var(--muted); }
+nav a { display: block; padding: 0.25rem 0.5rem; color: var(--accent); text-decoration: none; }
+nav a[aria-current] { background: var(--accent-bg); font-weight: bold; }
+
+.content { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+a { color: var(--accent); }
+.callout { border-left: 4px solid var(--accent); padding: 0 1rem; background: var(--accent-bg); }
+footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
