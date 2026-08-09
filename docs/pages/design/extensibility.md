@@ -59,8 +59,16 @@ antedom never ships project extensions.
 - Existing `Site.Build` and CLI behavior remain compatible.
 - The generated-site benchmark covers up to 10,000 posts. A manual synthetic
   10,001-page build completed in about two seconds in the development
-  environment, including `go run` compilation overhead. This is a useful
-  directional result, not a portable performance guarantee.
+  environment, including `go run` compilation overhead. In-process throughput
+  is roughly flat from 100 to 10,000 pages (about 9,800 falling to about
+  7,100 pages per second in one development environment). These are useful
+  directional results, not portable performance guarantees.
+- The per-page droop at 10,000 pages is a known residual O(n) cost: every
+  render still receives the full page list (the `pages` scope array and the
+  linear current-page lookup). It is harmless at this scale and is the next
+  scaling cliff somewhere around 100,000 pages. It also belongs to the
+  no-extension baseline, so the experiment below must not misattribute it to
+  extension overhead.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. There is no extension runtime, hook registry, module loader,
@@ -83,9 +91,7 @@ export default defineProject({
     ],
 
     "new:page": [
-      ({ page }) => {
-        page.meta.draft = true;
-      },
+      () => ({ meta: { draft: true } }),
     ],
   },
 
@@ -98,6 +104,10 @@ export default defineProject({
   },
 });
 ```
+
+Hook callbacks receive read-only context objects and return patches: the
+`new:page` handler above returns a metadata patch rather than mutating the
+page, matching the hook semantics below.
 
 Imports beginning with `antedom` are virtual modules supplied by the Go host.
 A Go-backed function such as `syntaxHighlight()` returns an opaque host
@@ -460,6 +470,11 @@ Support only:
 - Registration order only, with useful filenames, hook names, page paths, JS
   stacks, and Go causes in errors.
 
+`antedom.apiVersion` is a call rather than a declaration in the script form,
+so the loader must enforce it: if `antedom.js` exists but never calls
+`apiVersion`, or calls it after registering a hook or output, the build fails.
+The compatibility gate cannot be skipped silently.
+
 The MVP explicitly excludes `new` hooks, serve integration, custom CLI
 commands, relative imports, external packages, generic DOM traversal, hook
 dependency ordering, network and filesystem APIs, concurrency, and incremental
@@ -485,7 +500,12 @@ the MVP syntax should therefore be documented as experimental.
 
 ### Performance experiment
 
-Benchmark four generated sites at 100, 1,000, and 10,000 pages:
+The experiment needs two small `testsites` extensions first: generated posts
+with zero, one, and several fenced code blocks, and an option to write an
+`antedom.js` into the generated project.
+
+Benchmark four configurations of generated sites at 100, 1,000, and 10,000
+pages:
 
 1. No configuration file: establishes the current build baseline.
 2. An empty configuration file: measures runtime creation and script loading.
@@ -493,12 +513,23 @@ Benchmark four generated sites at 100, 1,000, and 10,000 pages:
 4. Go-backed highlighting plus the JSON manifest: measures the representative
    extension workload and output fan-out.
 
+The no-op hook must receive the same read-only page export as a real hook,
+so configuration 3 prices the full boundary crossing and configuration 4 adds
+only the workload.
+
 Report wall time, pages per second, allocations, and peak resident memory.
 Include pages with zero, one, and several code blocks so highlighting cost is
 not confused with hook overhead. A useful initial acceptance target is that an
 empty or no-op extension adds no more than roughly 10% to a 10,000-page build;
 representative highlighting should scale with the number and size of code
 blocks rather than the total site squared.
+
+The 10% figure is a gate, not the durable metric: it is relative to today's
+sequential baseline, and later work such as parallel rendering will shrink
+that baseline until an unchanged absolute JavaScript cost busts the
+percentage. Record the absolute per-page cost of the no-op round trip
+(microseconds per page) as the number to track across builds of antedom
+itself.
 
 If the no-op callback is too expensive, do not immediately add concurrency.
 First allow JavaScript to register a Go transformer once, so workers invoke Go
@@ -515,6 +546,9 @@ configuration while removing Sobek from the page hot loop.
    the public API.
 4. If the experiment succeeds, replace the single script loader with the
    extension runtime, module resolver, and stable `defineProject()` API.
+   Include a build-level data hook that injects values into template scope —
+   likely the most common real-world extension, deliberately absent from the
+   MVP because it exercises no risky boundary.
 5. Route `new` through a structured request and hooks.
 6. Generalize Go-backed capability registration beyond the MVP highlighter and
    manifest output.
