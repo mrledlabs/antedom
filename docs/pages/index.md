@@ -6,6 +6,9 @@
 }
 </script>
 
+antedom is a website engine for static* sites that uses web tech to build web sites.
+If you know the web platform, you know antedom.
+
 antedom renders valid-HTML templates:
 logic in `ante:`-prefixed attributes,
 expressions in JavaScript (sobek),
