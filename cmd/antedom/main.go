@@ -60,7 +60,7 @@ func main() {
 			return http.ListenAndServe(listen, handler)
 		},
 	}
-	serveCmd.Flags().StringVar(&listen, "listen", "127.0.0.1:35481", "listen address")
+	serveCmd.Flags().StringVar(&listen, "listen", "127.0.0.1:26833", "listen address")
 	serveCmd.Flags().BoolVar(&reload, "reload", true, "reload browsers when site files change")
 
 	var layout string
