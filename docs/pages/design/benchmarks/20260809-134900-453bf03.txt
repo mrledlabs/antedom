@@ -1,0 +1,60 @@
+host: Naragua
+kernel: Darwin 25.6.0
+power: AC
+commit: 453bf03
+commit-date: 2026-08-09T13:33:50-05:00
+date: 2026-08-09T13:49:01-05:00
+go-version: go1.26.5
+gomaxprocs: 14
+numcpu: 14
+benchtime: 1x
+count: 10
+dep-sobek: v0.0.0-20260727154728-7781506a890f
+dep-goldmark: v1.8.5
+dep-x-net: v0.57.0
+goos: darwin
+goarch: arm64
+pkg: micahrl.com/antedom
+cpu: Apple M4 Pro
+BenchmarkBuildBlog/10-14 	       1	   4286375 ns/op	      2566 pages/s	         0.004286 wall-s	  963968 B/op	    9592 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2516584 ns/op	      4371 pages/s	         0.002517 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2321458 ns/op	      4738 pages/s	         0.002321 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2437041 ns/op	      4514 pages/s	         0.002437 wall-s	  893608 B/op	    9276 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2323958 ns/op	      4733 pages/s	         0.002324 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   3310459 ns/op	      3323 pages/s	         0.003310 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2431500 ns/op	      4524 pages/s	         0.002432 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2403583 ns/op	      4577 pages/s	         0.002404 wall-s	  930808 B/op	    9283 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2272083 ns/op	      4841 pages/s	         0.002272 wall-s	  930760 B/op	    9282 allocs/op
+BenchmarkBuildBlog/10-14 	       1	   2423792 ns/op	      4538 pages/s	         0.002424 wall-s	  930712 B/op	    9281 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21167875 ns/op	      4771 pages/s	         0.02117 wall-s	 8077624 B/op	   79795 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21057750 ns/op	      4796 pages/s	         0.02106 wall-s	 8088232 B/op	   79806 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20464250 ns/op	      4935 pages/s	         0.02046 wall-s	 8003224 B/op	   79782 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20452666 ns/op	      4938 pages/s	         0.02045 wall-s	 8077432 B/op	   79792 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21047792 ns/op	      4799 pages/s	         0.02105 wall-s	 8077448 B/op	   79792 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21265292 ns/op	      4750 pages/s	         0.02127 wall-s	 8040328 B/op	   79787 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20481667 ns/op	      4931 pages/s	         0.02048 wall-s	 8077640 B/op	   79795 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  26275292 ns/op	      3844 pages/s	         0.02628 wall-s	 8077448 B/op	   79793 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  27372917 ns/op	      3690 pages/s	         0.02737 wall-s	 8040776 B/op	   79790 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21847667 ns/op	      4623 pages/s	         0.02185 wall-s	 8040328 B/op	   79787 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 364375583 ns/op	      2747 pages/s	         0.3644 wall-s	79785680 B/op	  788040 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 339373750 ns/op	      2950 pages/s	         0.3394 wall-s	80029664 B/op	  788054 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 345124375 ns/op	      2900 pages/s	         0.3451 wall-s	79698648 B/op	  788012 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 344101208 ns/op	      2909 pages/s	         0.3441 wall-s	79846136 B/op	  788031 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 358639042 ns/op	      2791 pages/s	         0.3586 wall-s	80106248 B/op	  788069 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 315595417 ns/op	      3172 pages/s	         0.3156 wall-s	79669352 B/op	  788018 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 313860125 ns/op	      3189 pages/s	         0.3139 wall-s	79883064 B/op	  788034 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 309483333 ns/op	      3234 pages/s	         0.3095 wall-s	79994488 B/op	  788050 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 294966917 ns/op	      3394 pages/s	         0.2950 wall-s	80106040 B/op	  788067 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 338567250 ns/op	      2957 pages/s	         0.3386 wall-s	79955440 B/op	  788044 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2996934958 ns/op	      3337 pages/s	         2.997 wall-s	792593568 B/op	 7871816 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2860964166 ns/op	      3496 pages/s	         2.861 wall-s	792662904 B/op	 7871825 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2839636875 ns/op	      3522 pages/s	         2.840 wall-s	791845104 B/op	 7871720 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2914440167 ns/op	      3432 pages/s	         2.914 wall-s	791883656 B/op	 7871721 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	3141527958 ns/op	      3183 pages/s	         3.142 wall-s	792809216 B/op	 7871844 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	3052285500 ns/op	      3277 pages/s	         3.052 wall-s	791621856 B/op	 7871684 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2941797708 ns/op	      3400 pages/s	         2.942 wall-s	792034240 B/op	 7871743 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2852061583 ns/op	      3507 pages/s	         2.852 wall-s	792213464 B/op	 7871762 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2904131792 ns/op	      3444 pages/s	         2.904 wall-s	791647584 B/op	 7871710 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2901429875 ns/op	      3447 pages/s	         2.901 wall-s	791883672 B/op	 7871720 allocs/op
+PASS
+ok  	micahrl.com/antedom	67.066s
