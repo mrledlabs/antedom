@@ -23,9 +23,10 @@ import (
 // directory, Handler renders pages per request. Both share render.
 type Site struct {
 	// Pages is a directory tree: *.html and *.md files bearing an
-	// ante:layout element are page templates — each renders to an
-	// index.html in its URL directory (see urlPath) — and every
-	// other file (a layout-less .html or .md included) passes
+	// ante:layout element — or naming a layout in their metadata,
+	// the sugar form (see desugar) — are page templates. Each
+	// renders to an index.html in its URL directory (see urlPath);
+	// every other file (a layout-less .html or .md included) passes
 	// through verbatim.
 	Pages string
 	// Layout is a directory of layout templates, named by ante:layout
@@ -92,16 +93,83 @@ func (s *Site) parse(path string) (*html.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	var doc *html.Node
 	if strings.HasSuffix(path, ".md") {
-		return parseMarkdown(src)
+		doc, err = parseMarkdown(src)
+	} else {
+		doc, err = html.Parse(bytes.NewReader(src))
 	}
-	return html.Parse(bytes.NewReader(src))
+	if err != nil {
+		return nil, err
+	}
+	if doc, err = desugar(doc); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return doc, nil
+}
+
+// desugar rewrites a sugar page — a document whose metadata names a
+// layout but which bears no ante:layout element — into the explicit
+// form: the body's children move into a bare <template ante:fill>
+// (targeting the layout chain's default slot) inside a
+// <template ante:layout="...">. A document with no metadata layout
+// key passes through unchanged; one with both spellings is an error.
+func desugar(doc *html.Node) (*html.Node, error) {
+	layout, err := metaLayout(doc)
+	if layout == "" || err != nil {
+		return doc, err
+	}
+	if findAttr(doc, Prefix+"layout") != nil {
+		return nil, fmt.Errorf("both an ante:layout element and a metadata layout key")
+	}
+	body := find(doc, func(el *html.Node) bool { return el.DataAtom == atom.Body })
+	if body == nil {
+		return nil, fmt.Errorf("no <body> element") // unreachable: html.Parse synthesizes one
+	}
+	fill := &html.Node{Type: html.ElementNode, DataAtom: atom.Template, Data: "template",
+		Attr: []html.Attribute{{Key: Prefix + "fill"}}}
+	for body.FirstChild != nil {
+		c := body.FirstChild
+		body.RemoveChild(c)
+		fill.AppendChild(c)
+	}
+	wrapper := &html.Node{Type: html.ElementNode, DataAtom: atom.Template, Data: "template",
+		Attr: []html.Attribute{{Key: Prefix + "layout", Val: layout}}}
+	wrapper.AppendChild(fill)
+	body.AppendChild(wrapper)
+	return doc, nil
+}
+
+// metaLayout returns the "layout" key of the document's ante:meta
+// element ("" if there is no meta element or no such key). Only JSON
+// syntax errors are reported here — page-ness hinges on the key, so a
+// meta that won't parse can't be shrugged off as opaque; takeMeta
+// enforces the full schema on pages.
+func metaLayout(doc *html.Node) (string, error) {
+	var meta *html.Node
+	find(doc, func(el *html.Node) bool {
+		if _, ok := attrVal(el, Prefix+"meta"); ok && meta == nil {
+			meta = el
+		}
+		return false // keep searching; find is our walker here
+	})
+	if meta == nil {
+		return "", nil
+	}
+	var m struct {
+		Layout string `json:"layout"`
+	}
+	if err := json.Unmarshal([]byte(text(meta)), &m); err != nil {
+		return "", fmt.Errorf("page metadata: %w", err)
+	}
+	return m.Layout, nil
 }
 
 // isPage reports whether the file is a page template: an .html or
-// .md file bearing an ante:layout element. Every other file — a
-// layout-less .html or .md included — is opaque: pageList skips it,
-// Build copies it, and Handler serves it verbatim.
+// .md file bearing an ante:layout element (sugar pages bear one
+// after desugar in parse). Every other file — a layout-less .html
+// or .md included — is opaque: pageList skips it, Build copies it,
+// and Handler serves it verbatim.
 func (s *Site) isPage(path string) (bool, error) {
 	if !strings.HasSuffix(path, ".html") && !strings.HasSuffix(path, ".md") {
 		return false, nil
@@ -121,6 +189,7 @@ func (s *Site) isPage(path string) (bool, error) {
 //	title  string — the page's title
 //	weight number — sibling sort order (see pageInfo.before)
 //	date   string — RFC 3339: a date (2006-01-02) or full timestamp
+//	layout string — sugar pages: the layout the body fills (see desugar)
 //	params object — free-form values for the site's own use
 //
 // The rendering walk drops the element, so metadata never ships.
@@ -128,6 +197,7 @@ type pageMeta struct {
 	Title  string         `json:"title"`
 	Date   string         `json:"date"`
 	Weight *float64       `json:"weight"`
+	Layout string         `json:"layout"`
 	Params map[string]any `json:"params"`
 }
 

@@ -1,26 +1,25 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "Markdown pages",
-  "weight": 4
+  "weight": 4,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 Status: implemented
 (`parseMarkdown` in `markdown.go`; `.md` handling in `site.go`).
 
 ## Model
 
-A `pages/**/*.md` file bearing `ante:layout` is a page
+A `pages/**/*.md` file bearing `ante:layout` —
+or naming a `layout` in its metadata, the sugar form
+(see [templating](/templating/)) — is a page
 of CommonMark content.
 It is rendered to HTML (goldmark) first,
 then flows through the normal pipeline —
 parse, `ante:layout` composition, directive walk —
 exactly as an `.html` page would.
-One without `ante:layout` is not a page:
+One doing neither is not a page:
 it passes through verbatim, like any other opaque file
 ([/pages/non-page-example.md](/pages/non-page-example.md) is one).
 Every page renders to an `index.html` in its own directory,
@@ -67,12 +66,12 @@ I would have liked to avoid this, but the implementation was too complex, at lea
 
 These docs are the example site:
 every page under `docs/pages/` — this file included —
-is a markdown page wrapped in layout/fill templates,
-composed into `docs/layout/base.html`
+is a markdown page composed into `docs/layout/base.html`
 with data from `docs/data/site.json`.
+All of them are sugar pages —
+metadata names the layout, the body fills its default slot,
+no wrapper templates in the source;
+the `.html` pages under `demo/` use the explicit form.
 Serve with `go run ./cmd/antedom serve --site docs`;
 `TestDocsSite` builds it in the normal test run.
 
-</template>
-
-</template>

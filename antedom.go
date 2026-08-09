@@ -13,7 +13,11 @@
 //	                     the following siblings and their subtrees, and the
 //	                     element is dropped (see scope.go)
 //	ante:layout / ante:slot / ante:fill   composition markers, consumed
-//	                     by Compose before the walk (see docs/templating.md)
+//	                     by Compose before the walk; a bare ante:slot is
+//	                     the layout's default slot, targeted by a bare
+//	                     ante:fill — or by the whole body of a sugar page,
+//	                     one whose metadata names its layout instead of
+//	                     bearing ante:layout (see docs/templating.md)
 //	ante:if="expr"          remove the element unless expr is truthy
 //	ante:for="x[, i] of expr"  repeat the element per item of the array expr
 //	ante:text="expr"        replace children with expr as escaped text

@@ -14,9 +14,9 @@ func demoSite(t *testing.T) *Site {
 	pages, layout := t.TempDir(), t.TempDir()
 	files := map[string]string{
 		"index.html": `<template ante:layout="default.html">` +
-			`<template ante:fill="main"><h1 ante:text="title"></h1></template></template>`,
+			`<template ante:fill><h1 ante:text="title"></h1></template></template>`,
 		"sub/index.html": `<template ante:layout="default.html">` +
-			`<template ante:fill="main"><p ante:text="page.path"></p></template></template>`,
+			`<template ante:fill><p ante:text="page.path"></p></template></template>`,
 		"sub/plain.txt": "passthrough",
 		// No ante:layout: opaque files, not pages — passed through
 		// verbatim, directives and all, and absent from pages.
@@ -24,14 +24,19 @@ func demoSite(t *testing.T) *Site {
 		"notes.md":     "# just notes\n",
 		// A non-index page: renders to leaf/index.html, URL /leaf/.
 		"leaf.md": "<template ante:layout=\"default.html\">\n\n" +
-			"<template ante:fill=\"main\">\n\nA *leaf* page.\n\n</template>\n\n</template>\n",
+			"<template ante:fill>\n\nA *leaf* page.\n\n</template>\n\n</template>\n",
 		// A markdown page through the full pipeline: layout/fill
 		// as raw HTML blocks, markdown between the blank lines,
 		// an inline directive mid-paragraph.
 		"md/index.md": "<template ante:layout=\"default.html\">\n\n" +
-			"<template ante:fill=\"main\">\n\n" +
+			"<template ante:fill>\n\n" +
 			"# Hi *there*\n\nOn <span ante:text=\"page.path\"></span> today.\n\n" +
 			"</template>\n\n</template>\n",
+		// The sugar form: no wrapper templates — the metadata names
+		// the layout, the body fills its default slot.
+		"sugar.md": "<script ante:meta type=\"application/json\">\n" +
+			"{\"title\": \"Sugar\", \"layout\": \"default.html\"}\n</script>\n\n" +
+			"A *sugar* page on <span ante:text=\"page.path\"></span>.\n",
 	}
 	for name, content := range files {
 		p := filepath.Join(pages, filepath.FromSlash(name))
@@ -42,7 +47,7 @@ func demoSite(t *testing.T) *Site {
 			t.Fatal(err)
 		}
 	}
-	base := `<html><body><main ante:slot="main"><p>fallback</p></main></body></html>`
+	base := `<html><body><main ante:slot><p>fallback</p></main></body></html>`
 	if err := os.WriteFile(filepath.Join(layout, "default.html"), []byte(base), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -60,17 +65,18 @@ func TestSiteBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 4 {
-		t.Errorf("built %d pages, want 4", pages)
+	if pages != 5 {
+		t.Errorf("built %d pages, want 5", pages)
 	}
 	for name, want := range map[string]string{
-		"index.html":      "<h1>hi</h1>",
-		"sub/index.html":  "<p>/sub/</p>",
-		"sub/plain.txt":   "passthrough",
-		"sub/raw.html":    `<p ante:text="title">opaque</p>`, // verbatim, unrendered
-		"notes.md":        "# just notes",                    // verbatim, still .md
-		"leaf/index.html": "A <em>leaf</em> page.",           // non-index page, pretty URL
-		"md/index.html":   `<h1 id="hi-there">Hi <em>there</em></h1>`,
+		"index.html":       "<h1>hi</h1>",
+		"sub/index.html":   "<p>/sub/</p>",
+		"sub/plain.txt":    "passthrough",
+		"sub/raw.html":     `<p ante:text="title">opaque</p>`, // verbatim, unrendered
+		"notes.md":         "# just notes",                    // verbatim, still .md
+		"leaf/index.html":  "A <em>leaf</em> page.",           // non-index page, pretty URL
+		"md/index.html":    `<h1 id="hi-there">Hi <em>there</em></h1>`,
+		"sugar/index.html": "A <em>sugar</em> page on <span>/sugar/</span>.",
 	} {
 		data, err := os.ReadFile(filepath.Join(out, name))
 		if err != nil {
@@ -133,11 +139,12 @@ func TestPageMeta(t *testing.T) {
 	}
 
 	for name, src := range map[string]string{
-		"unknown key":   page(`{"author": "ada"}`, ""),
-		"wrong type":    page(`{"weight": "heavy"}`, ""),
-		"bad date":      page(`{"date": "January 5th"}`, ""),
-		"trailing data": page(`{"weight": 1} {"weight": 2}`, ""),
-		"empty body":    page(``, ""),
+		"unknown key":           page(`{"author": "ada"}`, ""),
+		"wrong type":            page(`{"weight": "heavy"}`, ""),
+		"both layout spellings": page(`{"layout": "base.html"}`, ""),
+		"bad date":              page(`{"date": "January 5th"}`, ""),
+		"trailing data":         page(`{"weight": 1} {"weight": 2}`, ""),
+		"empty body":            page(``, ""),
 		"non-script": `<template ante:layout="base.html"><div ante:meta>{"weight": 1}</div>` +
 			`<template ante:fill="main"></template></template>`,
 		"two elements": page(`{"weight": 1}`, "") +
@@ -161,6 +168,7 @@ func TestSiteHandler(t *testing.T) {
 		"/leaf/":         "A <em>leaf</em> page.",           // non-index page at its pretty URL
 		"/md/":           "<p>On <span>/md/</span> today.</p>",
 		"/md/index.html": `<h1 id="hi-there">Hi <em>there</em></h1>`, // URL's own .md source renders
+		"/sugar/":        "A <em>sugar</em> page on <span>/sugar/</span>.",
 	} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest("GET", url, nil))

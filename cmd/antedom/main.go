@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -110,11 +111,33 @@ func newPage(siteDir, layout, rel string) (string, error) {
 		return "", fmt.Errorf("%s already exists", dest)
 	}
 	title, _ := json.Marshal(pageTitle(rel))
-	var fills strings.Builder
-	for _, slot := range openSlots(siteDir, layoutPath) {
-		fmt.Fprintf(&fills, "\n<template ante:fill=%q>\n\n</template>\n", slot)
-	}
-	src := fmt.Sprintf(`<template ante:layout=%q>
+	date := time.Now().Format("2006-01-02")
+	slots := openSlots(siteDir, layoutPath)
+	var src string
+	if strings.HasSuffix(rel, ".md") {
+		// Sugar form: the body fills the layout chain's default slot.
+		if !slices.Contains(slots, "") {
+			return "", fmt.Errorf("layout %s has no open default slot (bare ante:slot) for the page body; scaffold an .html page for the explicit form", layout)
+		}
+		src = fmt.Sprintf(`<script ante:meta type="application/json">
+{
+  "title": %s,
+  "date": %q,
+  "layout": %q
+}
+</script>
+
+`, title, date, layout)
+	} else {
+		var fills strings.Builder
+		for _, slot := range slots {
+			if slot == "" {
+				fills.WriteString("\n<template ante:fill>\n\n</template>\n")
+			} else {
+				fmt.Fprintf(&fills, "\n<template ante:fill=%q>\n\n</template>\n", slot)
+			}
+		}
+		src = fmt.Sprintf(`<template ante:layout=%q>
 
 <script ante:meta type="application/json">
 {
@@ -124,7 +147,8 @@ func newPage(siteDir, layout, rel string) (string, error) {
 </script>
 %s
 </template>
-`, layout, title, time.Now().Format("2006-01-02"), fills.String())
+`, layout, title, date, fills.String())
+	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o777); err != nil {
 		return "", err
 	}
@@ -148,9 +172,10 @@ func pageTitle(rel string) string {
 }
 
 // openSlots returns the slot names a page using the layout can fill,
-// in document order: the layout's chain is composed, and slots an
-// inner layout already fills are excluded (their single child bears
-// ante:fill). ["main"] if the chain can't be read.
+// in document order ("" is the default slot): the layout's chain is
+// composed, and slots an inner layout already fills are excluded
+// (their single child bears ante:fill). [""] if the chain can't be
+// read.
 func openSlots(siteDir, layoutPath string) []string {
 	load := func(name string) (*html.Node, error) {
 		src, err := os.ReadFile(filepath.Join(siteDir, "layout", name))
@@ -164,13 +189,15 @@ func openSlots(siteDir, layoutPath string) []string {
 		doc, err = antedom.Compose(doc, load)
 	}
 	if err != nil {
-		return []string{"main"}
+		return []string{""}
 	}
 	var slots []string
 	var walk func(*html.Node)
 	walk = func(n *html.Node) {
-		if slot := nodeAttr(n, antedom.Prefix+"slot"); slot != "" {
-			if fill := n.FirstChild; fill == nil || nodeAttr(fill, antedom.Prefix+"fill") == "" {
+		if slot, ok := nodeAttr(n, antedom.Prefix+"slot"); ok {
+			fill := n.FirstChild
+			filled := fill != nil && func() bool { _, ok := nodeAttr(fill, antedom.Prefix+"fill"); return ok }()
+			if !filled {
 				slots = append(slots, slot)
 				return // fallback content; gone once the slot is filled
 			}
@@ -184,13 +211,13 @@ func openSlots(siteDir, layoutPath string) []string {
 	return slots
 }
 
-func nodeAttr(n *html.Node, key string) string {
+func nodeAttr(n *html.Node, key string) (string, bool) {
 	for _, a := range n.Attr {
 		if a.Key == key {
-			return a.Val
+			return a.Val, true
 		}
 	}
-	return ""
+	return "", false
 }
 
 func newSite(siteDir string) *antedom.Site {

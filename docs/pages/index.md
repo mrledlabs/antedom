@@ -1,13 +1,10 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "antedom",
-  "weight": 1
+  "weight": 1,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 antedom renders valid-HTML templates:
 logic in `ante:`-prefixed attributes,
@@ -35,6 +32,3 @@ served with `go run ./cmd/antedom serve --site docs`.
   exercising <code ante:text="data.site.directives.length"></code> directives
   from `data/site.json` (that count is one of them, inline in this markdown).
 
-</template>
-
-</template>

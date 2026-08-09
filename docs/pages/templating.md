@@ -1,13 +1,10 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "Templating",
-  "weight": 2
+  "weight": 2,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 How to use the antedom template system: layouts, slots, and fills.
 
@@ -22,15 +19,20 @@ Three attributes:
 - `ante:layout="<file>"` — on the root element of a content page
   (or of another layout), names the layout to fill,
   resolved in the site's `layout/` directory.
-  `ante:layout` is also what makes a file a page at all:
-  an `.html` or `.md` file without it is opaque —
+  Naming a layout is also what makes a file a page at all —
+  by this attribute or by the metadata `layout` key
+  (the sugar form; see the next section);
+  an `.html` or `.md` file doing neither is opaque —
   passed through verbatim like any other file, never rendered.
 - `ante:slot="<name>"` — layout side: marks a hole.
   The element's children are the fallback;
   a matching fill replaces them.
   The element itself always stays.
+  A bare `ante:slot` — no name — is the layout's *default slot*,
+  the hole meant for the page's own content.
 - `ante:fill="<name>"` — content side: on a top-level element of the page,
   grafted as-is into the children of the matching slot.
+  A bare `ante:fill` targets the default slot.
 
 There is no slot-specific `<template>` behavior.
 A `<template>` antedom processes is unwrapped (see below),
@@ -38,6 +40,41 @@ and the wrapper-vs-no-wrapper distinction falls out of that:
 `<template ante:slot>` emits its filled children with no wrapper,
 `<template ante:fill>` contributes sibling elements with no wrapper,
 any other element keeps its tag in the output.
+
+## Content pages: the sugar form
+
+Most pages fill exactly one hole,
+and for those the wrapper templates are noise.
+Such a page may skip them:
+name the layout in the metadata instead,
+and the whole body fills the layout's default slot.
+
+```html
+<script ante:meta type="application/json">
+{
+  "title": "Hello",
+  "layout": "base.html"
+}
+</script>
+
+Content — markdown or HTML, `ante:` directives as usual.
+```
+
+This is sugar, not a second system:
+before composition the page is rewritten to the explicit form —
+body wrapped in a bare `ante:fill`
+inside a `<template ante:layout="...">` —
+so everything on this page applies unchanged.
+Using both spellings — an `ante:layout` element
+*and* a metadata `layout` key — is a build error.
+
+One body, one slot: a sugar page cannot fill named slots.
+A page that needs to writes the explicit form,
+or the shared customization moves into an intermediate layout
+(the Hugo norm) — see the chain in the example below.
+Every markdown page of these docs is a sugar page;
+the [sampleblog posts](/sampleblog/) chain
+through exactly such an intermediate layout.
 
 ## `<template>` and the client
 
@@ -69,8 +106,11 @@ and `ante:keep` hands it over without giving it up.
    that declares none.
 2. Fold outward-in: start from the base document,
    then apply each level's fills, the page's last.
-   Each level fills whatever slots are still open in the accumulated tree,
-   so a page can fill a base slot its intermediate layout never mentions.
+   Each fill grafts into the first still-open slot of its name,
+   in document order — so a page can fill a base slot
+   its intermediate layout never mentions,
+   and a chain of default slots pipes content through:
+   each level's bare fill lands in the bare slot one level out.
    Unfilled slots keep their fallback children.
 3. Run the normal directive walk once over the merged document.
    Directives inside fills evaluate here (so `ante:for` etc. just work),
@@ -119,7 +159,7 @@ pages/hello/index.html
 </head>
 <body>
   <nav><a href="/">home</a></nav>
-  <main ante:slot="main">
+  <main ante:slot>
     <p>nothing here yet</p>
   </main>
   <footer ante:text="`rendered at ${now}`">timestamp</footer>
@@ -128,13 +168,14 @@ pages/hello/index.html
 ```
 
 `layout/hello.html` — an intermediate layout:
-fills the base's `main`, declares its own `content` slot:
+its bare fill takes the base's default slot,
+and it declares a default slot of its own inside:
 
 ```html
 <template ante:layout="base.html">
-  <template ante:fill="main">
+  <template ante:fill>
     <nav class="section"><a href="/hello/">hello index</a></nav>
-    <article ante:slot="content">
+    <article ante:slot>
       <p>pick a page</p>
     </article>
   </template>
@@ -148,7 +189,7 @@ fills the base's `main`, declares its own `content` slot:
   <template ante:fill="head">
     <link rel="stylesheet" href="style.css">
   </template>
-  <template ante:fill="content">
+  <template ante:fill>
     <h1 ante:text="data.site.title">title</h1>
     <ul>
       <li ante:for="d of data.demo.directives" ante:text="d.name">directive</li>
@@ -156,6 +197,10 @@ fills the base's `main`, declares its own `content` slot:
   </template>
 </template>
 ```
+
+(Filling only the default slot, this page could equally be a sugar
+page — body plus a metadata `layout` — but the named `head` fill
+needs the explicit form.)
 
 Rendered output (abbreviated):
 
@@ -181,11 +226,13 @@ Rendered output (abbreviated):
 ```
 
 Tracing the markers:
-`<main ante:slot="main">` kept its tag,
-its fallback replaced by the intermediate's fill,
+`<main ante:slot>` kept its tag,
+its fallback replaced by the intermediate's bare fill,
 whose `<template>` wrapper unwrapped to nav + article siblings.
-`<article ante:slot="content">` kept its tag,
-children from the page.
+`<article ante:slot>` kept its tag, children from the page —
+the page's bare fill landed here, not in `<main>`,
+because a fill takes the first *still-open* slot of its name
+and the intermediate had already claimed the base's.
 `<template ante:slot="head">` unwrapped to just the page's `<link>`.
 A page filling nothing would get every fallback.
 
@@ -193,7 +240,7 @@ A page filling nothing would get every fallback.
 
 ```html
 <template ante:layout="base.html">
-  <template ante:fill="main">
+  <template ante:fill>
     <h1>antedom</h1>
     <p>…</p>
   </template>
@@ -210,6 +257,3 @@ A page filling nothing would get every fallback.
 - No `<slot>` element or `slot=` attribute support:
   one spelling, the `ante:` attributes.
 
-</template>
-
-</template>

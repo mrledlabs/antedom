@@ -1,13 +1,10 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "Pages",
-  "weight": 3
+  "weight": 3,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 Site pages are available via JavaScript. For example:
 
@@ -21,16 +18,17 @@ Site pages are available via JavaScript. For example:
   </nav>
 ```
 
-A page is any `*.md` or `*.html` file that contains a `<template ante:layout="...">` element with content inside it.
-Typically this will include an instance of `<script ante:meta type="application/json">` for page metadata
-and at least one `<template ante:fill="...">` to provide content for different slots in the layout.
+A page is any `*.md` or `*.html` file that names a layout —
+either the sugar form, a `layout` key in its
+`<script ante:meta type="application/json">` metadata
+(this page is one; the body fills the layout's default slot),
+or the explicit form, a `<template ante:layout="...">` element
+containing `<template ante:fill="...">` elements
+for the layout's slots (see [templating](/templating/)).
 
-A `*.md` or `*.html` file that lacks a `<template ante:layout="...">` element is treated as an opaque file ---
+A `*.md` or `*.html` file that names no layout is treated as an opaque file ---
 not a page, but the same as any other static file.
 
 Here's an example md file that is passed through directly:
 [non-page-example.md](non-page-example.md).
 
-</template>
-
-</template>

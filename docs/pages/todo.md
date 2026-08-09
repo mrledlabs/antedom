@@ -1,13 +1,10 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "To do",
-  "weight": 80
+  "weight": 80,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 Plans and ideas
 
@@ -59,6 +56,3 @@ Plans and ideas
 
 - Syntax highlighting for code blocks
 
-</template>
-
-</template>

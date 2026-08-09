@@ -1,13 +1,10 @@
-<template ante:layout="base.html">
-
 <script ante:meta type="application/json">
 {
   "title": "Shortcodes",
-  "weight": 5
+  "weight": 5,
+  "layout": "base.html"
 }
 </script>
-
-<template ante:fill="main">
 
 
 
@@ -136,6 +133,3 @@ The usual [CommonMark raw-HTML rules](/markdown/) apply:
   and one with no template in `layout/shortcode/` is a build error —
   as is any shortcode in a site with no `layout/` at all.
 
-</template>
-
-</template>

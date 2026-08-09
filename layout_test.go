@@ -68,21 +68,23 @@ func layoutSite(t *testing.T) *Site {
 </head>
 <body>
   <nav><a href="/">home</a></nav>
-  <main ante:slot="main"><p>nothing here yet</p></main>
+  <main ante:slot><p>nothing here yet</p></main>
 </body>
 </html>`,
 		"layout/section.html": `<template ante:layout="base.html">
-  <template ante:fill="main">
+  <template ante:fill>
     <nav class="section"><a href="/hello/">hello index</a></nav>
-    <article ante:slot="content"><p>pick a page</p></article>
+    <article ante:slot><p>pick a page</p></article>
   </template>
 </template>`,
 		"pages/index.html": `<template ante:layout="base.html">
-  <template ante:fill="main"><h1>top</h1></template>
+  <template ante:fill><h1>top</h1></template>
 </template>`,
+		// The page's bare fill chains past the base's default slot —
+		// already claimed by section.html — into section's own.
 		"pages/hello/index.html": `<template ante:layout="section.html">
   <template ante:fill="head"><link rel="stylesheet" href="style.css"></template>
-  <template ante:fill="content">
+  <template ante:fill>
     <ul><li ante:for="d of data.demo" ante:text="d">x</li></ul>
   </template>
 </template>`,

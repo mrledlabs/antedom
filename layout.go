@@ -16,10 +16,14 @@ import (
 // Compose resolves doc's ante:layout chain and returns the base
 // document with every level's fills grafted in. load parses the file
 // named by an ante:layout attribute. A doc with no ante:layout is
-// returned unchanged. Slot children are replaced by the fill element
-// (fallbacks stay where nothing fills); the ante:slot/ante:fill
-// attributes are left in place for the directive walk to consume, so
-// marker <template>s still unwrap.
+// returned unchanged. Fills fold outward-in — base first, the page
+// last — and each fill grafts into the first still-open slot of its
+// name in document order, so a chain of default (bare ante:slot)
+// slots pipes content through: each level's bare ante:fill lands in
+// the bare slot one level out. Slot children are replaced by the fill
+// element (fallbacks stay where nothing fills); the ante:slot/
+// ante:fill attributes are left in place for the directive walk to
+// consume, so marker <template>s still unwrap.
 func Compose(doc *html.Node, load func(name string) (*html.Node, error)) (*html.Node, error) {
 	const maxDepth = 10
 	var levels [][]*html.Node // fills, innermost (page) first
@@ -39,16 +43,17 @@ func Compose(doc *html.Node, load func(name string) (*html.Node, error)) (*html.
 		}
 		doc = next
 	}
-	closed := map[string]bool{}
+	filled := map[*html.Node]bool{}
 	for i := len(levels) - 1; i >= 0; i-- {
 		for _, fill := range levels[i] {
 			name, _ := attrVal(fill, Prefix+"fill")
-			if closed[name] {
-				continue
-			}
-			if slot := findAttrVal(doc, Prefix+"slot", name); slot != nil {
+			slot := find(doc, func(el *html.Node) bool {
+				v, ok := attrVal(el, Prefix+"slot")
+				return ok && v == name && !filled[el]
+			})
+			if slot != nil {
 				setChildren(slot, fill)
-				closed[name] = true
+				filled[slot] = true
 			}
 		}
 	}
@@ -78,14 +83,6 @@ func findAttr(n *html.Node, key string) *html.Node {
 	return find(n, func(el *html.Node) bool {
 		_, ok := attrVal(el, key)
 		return ok
-	})
-}
-
-// findAttrVal is findAttr further requiring the attribute value val.
-func findAttrVal(n *html.Node, key, val string) *html.Node {
-	return find(n, func(el *html.Node) bool {
-		v, ok := attrVal(el, key)
-		return ok && v == val
 	})
 }
 
