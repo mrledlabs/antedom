@@ -584,7 +584,10 @@ absolute per-page cost as the more durable metric.
    extension runtime, module resolver, and stable `defineProject()` API.
    Include a build-level data hook that injects values into template scope —
    likely the most common real-world extension, deliberately absent from the
-   MVP because it exercises no risky boundary.
+   MVP because it exercises no risky boundary. Page-local data no longer
+   needs it: a page reads its own bundle through the core
+   [page assets](/design/assets/) feature; the hook remains the design for
+   site-wide and computed data.
 5. Route `new` through a structured request and hooks.
 6. Generalize Go-backed capability registration beyond the MVP highlighter and
    manifest output.

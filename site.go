@@ -43,11 +43,11 @@ type Site struct {
 // to Pages) into w. Each render gets its own Engine: template JS can
 // leak globals into a runtime, so none is reused across pages.
 func (s *Site) render(w io.Writer, rel string) error {
-	pages, err := s.pageList()
+	plan, err := s.Plan()
 	if err != nil {
 		return fmt.Errorf("listing pages: %w", err)
 	}
-	doc, body, err := s.renderPage(rel, pages)
+	doc, body, err := s.renderPage(rel, plan)
 	if err != nil {
 		return err
 	}
@@ -56,12 +56,12 @@ func (s *Site) render(w io.Writer, rel string) error {
 	return err
 }
 
-func (s *Site) renderPage(rel string, pages []map[string]any) (*html.Node, []byte, error) {
+func (s *Site) renderPage(rel string, plan *BuildPlan) (*html.Node, []byte, error) {
 	page := &Page{RelPath: rel, URLPath: urlPath(rel)}
-	return s.renderPageWithHook(context.Background(), page, pages, nil)
+	return s.renderPageWithHook(context.Background(), page, plan.pageData, plan.pageAssets(rel), nil)
 }
 
-func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, hook PageDocumentHook) (*html.Node, []byte, error) {
+func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, assets []*Asset, hook PageDocumentHook) (*html.Node, []byte, error) {
 	rel := page.RelPath
 	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
 	if err != nil {
@@ -86,13 +86,20 @@ func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[s
 	}
 	data["pages"] = pages
 	u := urlPath(rel)
-	data["page"] = map[string]any{"path": u}
+	pageScope := map[string]any{"path": u}
 	for _, pm := range pages {
 		if pm["path"] == u {
-			data["page"] = pm
+			// Copy: pm is shared by the pages global and other renders,
+			// and assets are deliberately per-page, not global.
+			pageScope = make(map[string]any, len(pm)+1)
+			for k, v := range pm {
+				pageScope[k] = v
+			}
 			break
 		}
 	}
+	pageScope["assets"] = assetScope(assets)
+	data["page"] = pageScope
 	engine, err := New()
 	if err != nil {
 		return nil, nil, err
@@ -107,6 +114,36 @@ func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[s
 		return nil, nil, fmt.Errorf("rendering %s: %w", rel, err)
 	}
 	return doc, buf.Bytes(), nil
+}
+
+// assetScope shapes a page's bundle for template scope (page.assets):
+// each entry exposes name, url, and a text() function. text() reads the
+// file only when called (so large assets cost nothing unless a template
+// reads them; Build streams their output copies separately) and at most
+// once per render. A read failure is thrown as a JS exception, failing
+// the render with the page's context.
+func assetScope(assets []*Asset) []any {
+	out := make([]any, len(assets))
+	for i, a := range assets {
+		src := a.SourcePath
+		var cached *string
+		out[i] = map[string]any{
+			"name": path.Base(a.RelPath),
+			"url":  "/" + a.OutputPath,
+			"text": func() (string, error) {
+				if cached == nil {
+					b, err := os.ReadFile(src)
+					if err != nil {
+						return "", err
+					}
+					s := string(b)
+					cached = &s
+				}
+				return *cached, nil
+			},
+		}
+	}
+	return out
 }
 
 func (s *Site) parse(path string) (*html.Node, error) {

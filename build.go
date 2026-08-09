@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -48,6 +49,21 @@ type BuildPlan struct {
 	Assets []*Asset
 
 	pageData []map[string]any
+}
+
+// pageAssets returns the opaque files sharing rel's source directory,
+// in name order: the page's bundle, exposed to templates as
+// page.assets (see assetScope). Sibling pages in one directory share a
+// bundle; there is no leaf/branch distinction.
+func (p *BuildPlan) pageAssets(rel string) []*Asset {
+	dir := path.Dir(rel)
+	var out []*Asset
+	for _, a := range p.Assets {
+		if path.Dir(a.RelPath) == dir {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 // RenderedPage is the ephemeral result passed to outputs. Document and HTML
@@ -222,7 +238,7 @@ func (s *Site) BuildWithOptions(ctx context.Context, plan *BuildPlan, output Out
 		if err = ctx.Err(); err != nil {
 			return pages, err
 		}
-		doc, body, renderErr := s.renderPageWithHook(ctx, page, plan.pageData, options.PageDocument)
+		doc, body, renderErr := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(page.RelPath), options.PageDocument)
 		if renderErr != nil {
 			return pages, renderErr
 		}

@@ -35,8 +35,8 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 15 {
-		t.Errorf("built %d pages, want 15", pages)
+	if pages != 16 {
+		t.Errorf("built %d pages, want 16", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
