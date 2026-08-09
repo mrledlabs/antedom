@@ -35,8 +35,8 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 12 {
-		t.Errorf("built %d pages, want 12", pages)
+	if pages != 14 {
+		t.Errorf("built %d pages, want 14", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
@@ -100,8 +100,16 @@ func TestDocsSite(t *testing.T) {
 			`<a href="/sampleblog/second-post/">Second post →</a>`,
 		},
 		"pages/index.html": {"<h1>Pages</h1>"},
-		"style.css":        {"nav a"},
-		"icon.svg":         {"<svg"},
+		"design/index.html": {
+			"<h1>Design</h1>",
+			`<a href="extensibility/">Extensibility</a>`,
+		},
+		"design/extensibility/index.html": {
+			"<h1>Extensibility</h1>",
+			"The extension system should be a small Go build kernel",
+		},
+		"style.css": {"nav a"},
+		"icon.svg":  {"<svg"},
 		// No ante:layout: opaque, copied verbatim, absent from the nav.
 		"pages/non-page-example.md": {"# Non-page Markdown file example"},
 	} {
@@ -130,7 +138,8 @@ func TestDocsSite(t *testing.T) {
 	last := -1
 	for _, href := range []string{
 		`href="/"`, `href="/templating/"`, `href="/pages/"`, `href="/markdown/"`,
-		`href="/shortcodes/"`, `href="/demo/"`, `href="/demo/attributes/"`, `href="/sampleblog/"`,
+		`href="/shortcodes/"`, `href="/demo/"`, `href="/demo/attributes/"`,
+		`href="/design/"`, `href="/design/extensibility/"`, `href="/sampleblog/"`,
 		`href="/sampleblog/third-post/"`, `href="/sampleblog/second-post/"`,
 		`href="/sampleblog/first-post/"`,
 	} {
