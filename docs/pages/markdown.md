@@ -20,6 +20,8 @@ A simple Markdown content page looks like this:
 }
 </script>
 
+## A title
+
 Here is some Markdown content.
 ```
 
@@ -35,6 +37,8 @@ That is syntactic sugar for the more explicit:
 </script>
 
 <template ante:fill>
+
+## A title
 
 Here is some Markdown content.
 
