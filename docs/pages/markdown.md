@@ -70,7 +70,7 @@ every page under `docs/pages/` — this file included —
 is a markdown page wrapped in layout/fill templates,
 composed into `docs/layout/base.html`
 with data from `docs/data/site.json`.
-Serve with `go run ./cmd/antedom -site docs`;
+Serve with `go run ./cmd/antedom serve --site docs`;
 `TestDocsSite` builds it in the normal test run.
 
 </template>

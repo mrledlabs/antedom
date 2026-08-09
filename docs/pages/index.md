@@ -18,7 +18,7 @@ The directive reference lives in the package doc comment
 
 These docs are themselves an antedom site —
 markdown pages, composed into `layout/base.html`,
-served with `go run ./cmd/antedom -site docs`.
+served with `go run ./cmd/antedom serve --site docs`.
 
 - [Templating: layouts, slots, fills](templating/) —
   base templates, inheritance, and content pages

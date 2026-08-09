@@ -3,13 +3,12 @@
 // the files bearing ante:layout — everything else passes through),
 // layout/ (layout templates named by ante:layout),
 // and data/ (*.json files, in scope as data.<name>).
-// -build renders the site to a directory and exits;
-// otherwise it serves the site over HTTP, rendering per request.
+// "antedom build" renders the site to a directory and exits;
+// "antedom serve" serves the site over HTTP, rendering per request.
 package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,35 +17,69 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"micahrl.com/antedom"
 )
 
 func main() {
-	siteDir := flag.String("site", ".", "site directory holding pages/, layout/, and data/")
-	listen := flag.String("listen", "127.0.0.1:35481", "listen address (serve mode)")
-	build := flag.String("build", "", "render the site to this directory and exit")
-	reload := flag.Bool("reload", true, "reload browsers when site files change (serve mode)")
-	flag.Parse()
+	var siteDir string
 
-	site := &antedom.Site{
-		Pages:  filepath.Join(*siteDir, "pages"),
-		Layout: filepath.Join(*siteDir, "layout"),
-		Data:   dataFunc(filepath.Join(*siteDir, "data")),
+	root := &cobra.Command{
+		Use:           "antedom",
+		Short:         "Build or serve an antedom site",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
-	if *build != "" {
-		pages, err := site.Build(*build)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("built %d pages into %s", pages, *build)
-		return
+	root.PersistentFlags().StringVar(&siteDir, "site", ".", "site directory holding pages/, layout/, and data/")
+
+	var outDir string
+	buildCmd := &cobra.Command{
+		Use:   "build",
+		Short: "Render the site to a directory and exit",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pages, err := newSite(siteDir).Build(outDir)
+			if err != nil {
+				return err
+			}
+			log.Printf("built %d pages into %s", pages, outDir)
+			return nil
+		},
 	}
-	handler := http.Handler(site.Handler())
-	if *reload {
-		handler = antedom.LiveReload(handler, *siteDir)
+	buildCmd.Flags().StringVarP(&outDir, "out", "o", "public", "output directory")
+
+	var listen string
+	var reload bool
+	serveCmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Serve the site over HTTP, rendering per request",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			handler := http.Handler(newSite(siteDir).Handler())
+			if reload {
+				handler = antedom.LiveReload(handler, siteDir)
+			}
+			log.Printf("antedom serving %s on %s", siteDir, listen)
+			return http.ListenAndServe(listen, handler)
+		},
 	}
-	log.Printf("antedom serving %s on %s", *siteDir, *listen)
-	log.Fatal(http.ListenAndServe(*listen, handler))
+	serveCmd.Flags().StringVar(&listen, "listen", "127.0.0.1:35481", "listen address")
+	serveCmd.Flags().BoolVar(&reload, "reload", true, "reload browsers when site files change")
+
+	root.AddCommand(buildCmd, serveCmd)
+
+	if err := root.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func newSite(siteDir string) *antedom.Site {
+	return &antedom.Site{
+		Pages:  filepath.Join(siteDir, "pages"),
+		Layout: filepath.Join(siteDir, "layout"),
+		Data:   dataFunc(filepath.Join(siteDir, "data")),
+	}
 }
 
 // dataFunc assembles the page scope: each data/*.json file under
