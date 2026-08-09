@@ -72,9 +72,9 @@ antedom never ships project extensions.
 - The first extension MVP slice is implemented for project builds: an optional
   `antedom.js`, one build-scoped Sobek runtime, an enforced
   `antedom.apiVersion(1)` compatibility gate, registration-order
-  `page:document` hooks, deeply frozen page paths and metadata, and an opaque
-  document handle. Configuration and hook errors include the extension file,
-  hook, and page context.
+  `page:document` hooks, deeply read-only host-backed page paths and metadata,
+  and an opaque document handle. Configuration and hook errors include the
+  extension file, hook, and page context.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `serve` or `new`. There is
@@ -546,22 +546,29 @@ configuration while removing Sobek from the page hot loop.
 
 ### Initial extension benchmark
 
-The first one-iteration ARM64 development benchmark produced these directional
+The first implementation copied and deeply froze a new JavaScript object graph
+for every page. At 10,000 posts, its no-op hook took about 1.59 seconds,
+allocated 924 MB cumulatively, and added about 15% over baseline. This missed
+the provisional gate and showed that page-export construction, rather than
+runtime loading, was the immediate problem.
+
+The optimized implementation exposes the same immutable inputs through Sobek
+read-only dynamic objects and arrays. It rejects writes and deletes at every
+level without copying and recursively freezing the complete graph. Three
+one-iteration ARM64 development runs produced these average directional
 10,000-post results:
 
 | Configuration | Time | Pages/second | Time/page | Allocated bytes |
 | --- | ---: | ---: | ---: | ---: |
-| No `antedom.js` | 1.38 s | 7,235 | 138.2 µs | 772 MB |
-| Minimal `apiVersion(1)` | 1.45 s | 6,906 | 144.8 µs | 775 MB |
-| One no-op page hook | 1.59 s | 6,273 | 159.4 µs | 924 MB |
+| No `antedom.js` | 1.425 s | 7,018 | 142.5 µs | 772 MB |
+| Minimal `apiVersion(1)` | 1.435 s | 6,970 | 143.5 µs | 775 MB |
+| One no-op page hook | 1.445 s | 6,924 | 144.5 µs | 794 MB |
 
-The minimal configuration added about 5% in this sample. The complete no-op
-page boundary added about 15%, or roughly 21 µs/page, and substantial
-allocation. The 1,000-post result showed a similar percentage. This misses the
-provisional 10% gate and identifies frozen page-export construction plus the
-per-page Sobek call as the next performance question. Repeat benchmarks should
-separate those two costs before choosing between optimizing the export and
-switching the hot loop to registered Go transforms.
+The optimized complete no-op boundary is about 1.4% slower than baseline in
+these runs, or roughly 2 µs/page, and is inside the provisional 10% gate. Its
+cumulative allocation is about 22 MB above baseline, compared with roughly
+152 MB above baseline for the copied/frozen representation. Keep tracking the
+absolute per-page cost as the more durable metric.
 
 ## Implementation sequence
 

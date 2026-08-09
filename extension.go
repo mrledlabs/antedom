@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/grafana/sobek"
 	"golang.org/x/net/html"
@@ -19,7 +20,6 @@ type projectExtension struct {
 	vm            *sobek.Runtime
 	versionCalled bool
 	hooks         []sobek.Callable
-	deepFreeze    sobek.Callable
 }
 
 // loadProjectExtension loads <root>/antedom.js. A missing file means no
@@ -47,18 +47,6 @@ func loadProjectExtension(root string) (*projectExtension, error) {
 	if err := vm.Set("antedom", api); err != nil {
 		return nil, err
 	}
-
-	v, err := vm.RunString(`(function deepFreeze(value) {
-  if (value && typeof value === "object" && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const key of Object.keys(value)) deepFreeze(value[key]);
-  }
-  return value;
-})`)
-	if err != nil {
-		return nil, err
-	}
-	ext.deepFreeze, _ = sobek.AssertFunction(v)
 
 	if _, err := vm.RunScript(path, string(src)); err != nil {
 		return nil, fmt.Errorf("loading extension %s: %w", path, err)
@@ -104,7 +92,7 @@ func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	document := e.vm.NewObject() // Opaque until Go-backed DOM operations arrive.
+	document := e.readOnlyObject(nil) // Opaque until Go-backed DOM operations arrive.
 	pageValue := map[string]any{
 		"sourcePath": page.SourcePath,
 		"relPath":    page.RelPath,
@@ -114,10 +102,7 @@ func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html
 		"meta":       page.Meta,
 		"document":   document,
 	}
-	v := e.plainValue(pageValue)
-	if _, err := e.deepFreeze(sobek.Undefined(), v); err != nil {
-		return fmt.Errorf("extension %s: preparing page %s: %w", e.path, page.RelPath, err)
-	}
+	v := e.readOnlyValue(pageValue)
 	for _, hook := range e.hooks {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -129,28 +114,60 @@ func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html
 	return nil
 }
 
-// plainValue copies JSON-shaped Go data into ordinary JavaScript objects and
-// arrays. Sobek exposes Go maps as host objects, whose fields cannot be frozen;
-// extension inputs must instead be genuine, deeply freezable JS values.
-func (e *projectExtension) plainValue(value any) sobek.Value {
+// readOnlyValue exposes JSON-shaped Go data through small host-backed views.
+// This avoids copying and recursively freezing a fresh JS object graph for
+// every page while still rejecting writes and deletes at every level.
+func (e *projectExtension) readOnlyValue(value any) sobek.Value {
 	switch value := value.(type) {
 	case nil:
 		return sobek.Null()
 	case map[string]any:
-		obj := e.vm.NewObject()
-		for key, item := range value {
-			if err := obj.Set(key, e.plainValue(item)); err != nil {
-				panic(err)
-			}
-		}
-		return obj
+		return e.readOnlyObject(value)
 	case []any:
-		items := make([]any, len(value))
+		items := make([]sobek.Value, len(value))
 		for i, item := range value {
-			items[i] = e.plainValue(item)
+			items[i] = e.readOnlyValue(item)
 		}
-		return e.vm.NewArray(items...)
+		return e.vm.NewDynamicArray(&readOnlyArray{items: items})
+	case sobek.Value:
+		return value
 	default:
 		return e.vm.ToValue(value)
 	}
 }
+
+func (e *projectExtension) readOnlyObject(value map[string]any) sobek.Value {
+	values := make(map[string]sobek.Value, len(value))
+	keys := make([]string, 0, len(value))
+	for key, item := range value {
+		keys = append(keys, key)
+		values[key] = e.readOnlyValue(item)
+	}
+	sort.Strings(keys)
+	return e.vm.NewDynamicObject(&readOnlyObject{values: values, keys: keys})
+}
+
+type readOnlyObject struct {
+	values map[string]sobek.Value
+	keys   []string
+}
+
+func (o *readOnlyObject) Get(key string) sobek.Value   { return o.values[key] }
+func (o *readOnlyObject) Set(string, sobek.Value) bool { return false }
+func (o *readOnlyObject) Has(key string) bool          { _, ok := o.values[key]; return ok }
+func (o *readOnlyObject) Delete(string) bool           { return false }
+func (o *readOnlyObject) Keys() []string               { return o.keys }
+
+type readOnlyArray struct {
+	items []sobek.Value
+}
+
+func (a *readOnlyArray) Len() int { return len(a.items) }
+func (a *readOnlyArray) Get(i int) sobek.Value {
+	if i < 0 || i >= len(a.items) {
+		return nil
+	}
+	return a.items[i]
+}
+func (a *readOnlyArray) Set(int, sobek.Value) bool { return false }
+func (a *readOnlyArray) SetLen(int) bool           { return false }

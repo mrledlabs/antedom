@@ -91,12 +91,15 @@ antedom.apiVersion(1);
 let firstHookRan = false;
 antedom.on("page:document", (page) => {
   "use strict";
-  if (!Object.isFrozen(page) || !Object.isFrozen(page.meta) || !Object.isFrozen(page.document)) {
-    throw new Error("page export is mutable");
-  }
   if (page.urlPath === "/posts/post-0001/") {
     try { page.meta.title = "Changed"; } catch (_) {}
     if (page.meta.title !== "Post 0001") throw new Error("metadata changed");
+    try { page.extra = "added"; } catch (_) {}
+    if ("extra" in page) throw new Error("page property added");
+    try { delete page.meta.title; } catch (_) {}
+    if (page.meta.title !== "Post 0001") throw new Error("metadata deleted");
+    try { page.document.extra = true; } catch (_) {}
+    if ("extra" in page.document) throw new Error("document property added");
   }
   firstHookRan = true;
 });
