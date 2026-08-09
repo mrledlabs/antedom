@@ -1,6 +1,8 @@
 package antedom
 
 import (
+	"context"
+	"errors"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -8,6 +10,34 @@ import (
 	"strings"
 	"testing"
 )
+
+type recordingOutput struct {
+	began, committed, aborted bool
+	pages                     []string
+	assets                    []string
+	failPage                  bool
+}
+
+func (o *recordingOutput) Begin(context.Context, *BuildPlan) error {
+	o.began = true
+	return nil
+}
+func (o *recordingOutput) WritePage(_ context.Context, page *RenderedPage) error {
+	if o.failPage {
+		return errors.New("output failed")
+	}
+	if page.Document == nil || len(page.HTML) == 0 {
+		return errors.New("output received an incomplete rendered page")
+	}
+	o.pages = append(o.pages, page.Page.OutputPath)
+	return nil
+}
+func (o *recordingOutput) WriteAsset(_ context.Context, asset *Asset) error {
+	o.assets = append(o.assets, asset.OutputPath)
+	return nil
+}
+func (o *recordingOutput) Commit(context.Context) error { o.committed = true; return nil }
+func (o *recordingOutput) Abort(context.Context) error  { o.aborted = true; return nil }
 
 func demoSite(t *testing.T) *Site {
 	t.Helper()
@@ -91,6 +121,36 @@ func TestSiteBuild(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(out, "leaf.html")); err == nil {
 		t.Error("leaf.html built; pages render only at their URL directory")
+	}
+}
+
+func TestBuildPlanAndOutput(t *testing.T) {
+	s := demoSite(t)
+	plan, err := s.Plan()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Pages) != 5 || len(plan.Assets) != 3 {
+		t.Fatalf("plan has %d pages and %d assets, want 5 and 3", len(plan.Pages), len(plan.Assets))
+	}
+	out := &recordingOutput{}
+	built, err := s.BuildWith(context.Background(), plan, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if built != 5 || !out.began || !out.committed || out.aborted {
+		t.Fatalf("output lifecycle: built=%d begin=%v commit=%v abort=%v", built, out.began, out.committed, out.aborted)
+	}
+	if len(out.pages) != 5 || len(out.assets) != 3 {
+		t.Fatalf("output got %d pages and %d assets", len(out.pages), len(out.assets))
+	}
+
+	failing := &recordingOutput{failPage: true}
+	if _, err := s.BuildWith(context.Background(), plan, failing); err == nil {
+		t.Fatal("failing output returned no error")
+	}
+	if !failing.aborted || failing.committed {
+		t.Fatalf("failed output lifecycle: commit=%v abort=%v", failing.committed, failing.aborted)
 	}
 }
 

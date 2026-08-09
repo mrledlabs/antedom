@@ -2,15 +2,14 @@ package antedom
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -44,25 +43,35 @@ type Site struct {
 // to Pages) into w. Each render gets its own Engine: template JS can
 // leak globals into a runtime, so none is reused across pages.
 func (s *Site) render(w io.Writer, rel string) error {
-	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
+	pages, err := s.pageList()
+	if err != nil {
+		return fmt.Errorf("listing pages: %w", err)
+	}
+	doc, body, err := s.renderPage(rel, pages)
 	if err != nil {
 		return err
+	}
+	_ = doc
+	_, err = w.Write(body)
+	return err
+}
+
+func (s *Site) renderPage(rel string, pages []map[string]any) (*html.Node, []byte, error) {
+	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
+	if err != nil {
+		return nil, nil, err
 	}
 	if s.Layout != "" {
 		doc, err = Compose(doc, func(name string) (*html.Node, error) {
 			return s.parse(filepath.Join(s.Layout, filepath.FromSlash(name)))
 		})
 		if err != nil {
-			return fmt.Errorf("composing %s: %w", rel, err)
+			return nil, nil, fmt.Errorf("composing %s: %w", rel, err)
 		}
 	}
 	data, err := s.Data()
 	if err != nil {
-		return fmt.Errorf("assembling data: %w", err)
-	}
-	pages, err := s.pageList()
-	if err != nil {
-		return fmt.Errorf("listing pages: %w", err)
+		return nil, nil, fmt.Errorf("assembling data: %w", err)
 	}
 	data["pages"] = pages
 	u := urlPath(rel)
@@ -75,17 +84,18 @@ func (s *Site) render(w io.Writer, rel string) error {
 	}
 	engine, err := New()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if s.Layout != "" {
 		engine.Shortcodes = func(name string) ([]byte, error) {
 			return os.ReadFile(filepath.Join(s.Layout, "shortcode", name+".html"))
 		}
 	}
-	if err := engine.RenderDoc(w, doc, data); err != nil {
-		return fmt.Errorf("rendering %s: %w", rel, err)
+	var buf bytes.Buffer
+	if err := engine.RenderDoc(&buf, doc, data); err != nil {
+		return nil, nil, fmt.Errorf("rendering %s: %w", rel, err)
 	}
-	return nil
+	return doc, buf.Bytes(), nil
 }
 
 func (s *Site) parse(path string) (*html.Node, error) {
@@ -284,83 +294,11 @@ func (a *pageInfo) before(b *pageInfo) bool {
 // pages follow its index page. Sources are re-parsed per render so
 // serve mode tracks edits.
 func (s *Site) pageList() ([]map[string]any, error) {
-	groups := map[string][]*pageInfo{} // sibling group per directory
-	err := filepath.WalkDir(s.Pages, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		if !strings.HasSuffix(p, ".html") && !strings.HasSuffix(p, ".md") {
-			return nil
-		}
-		rel, err := filepath.Rel(s.Pages, p)
-		if err != nil {
-			return err
-		}
-		doc, err := s.parse(p)
-		if err != nil {
-			return err
-		}
-		if findAttr(doc, Prefix+"layout") == nil {
-			return nil // opaque file, not a page (see isPage)
-		}
-		u := urlPath(filepath.ToSlash(rel))
-		depth := strings.Count(strings.TrimSuffix(u, "/"), "/") - 1
-		if depth < 0 {
-			depth = 0
-		}
-		info := &pageInfo{path: u, depth: depth}
-		if err := takeMeta(doc, info); err != nil {
-			return fmt.Errorf("%s: page metadata: %w", p, err)
-		}
-		if info.title == "" {
-			info.title = u
-		}
-		groups[groupOf(u)] = append(groups[groupOf(u)], info)
-		return nil
-	})
+	plan, err := s.Plan()
 	if err != nil {
 		return nil, err
 	}
-	for _, g := range groups {
-		sort.SliceStable(g, func(i, j int) bool { return g[i].before(g[j]) })
-	}
-	var out []map[string]any
-	emitted := map[string]bool{}
-	var emit func(dir string)
-	emit = func(dir string) {
-		if emitted[dir] {
-			return
-		}
-		emitted[dir] = true
-		for _, pi := range groups[dir] {
-			m := map[string]any{"path": pi.path, "title": pi.title, "depth": pi.depth}
-			if pi.date != "" {
-				m["date"] = pi.date
-			}
-			if pi.weight != nil {
-				m["weight"] = *pi.weight
-			}
-			if pi.params != nil {
-				m["params"] = pi.params
-			}
-			out = append(out, m)
-			if pi.path != "/" && strings.HasSuffix(pi.path, "/") {
-				emit(pi.path)
-			}
-		}
-	}
-	emit("/")
-	var rest []string // directories with no index page above them
-	for dir := range groups {
-		if !emitted[dir] {
-			rest = append(rest, dir)
-		}
-	}
-	sort.Strings(rest)
-	for _, dir := range rest {
-		emit(dir)
-	}
-	return out, nil
+	return plan.pageData, nil
 }
 
 // groupOf maps a page's URL path to its sibling group: the directory
@@ -407,40 +345,11 @@ func urlPath(rel string) string {
 // verbatim at their own paths. It returns the number of pages
 // rendered (opaque files not counted).
 func (s *Site) Build(out string) (int, error) {
-	pages := 0
-	err := filepath.WalkDir(s.Pages, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		rel, err := filepath.Rel(s.Pages, p)
-		if err != nil {
-			return err
-		}
-		dst := filepath.Join(out, rel)
-		if ok, err := s.isPage(p); err != nil {
-			return err
-		} else if !ok {
-			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-				return err
-			}
-			return copyFile(dst, p)
-		}
-		dst = filepath.Join(out, filepath.FromSlash(urlPath(filepath.ToSlash(rel))), "index.html")
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return err
-		}
-		f, err := os.Create(dst)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if err := s.render(f, filepath.ToSlash(rel)); err != nil {
-			return err
-		}
-		pages++
-		return f.Close()
-	})
-	return pages, err
+	plan, err := s.Plan()
+	if err != nil {
+		return 0, err
+	}
+	return s.BuildWith(context.Background(), plan, NewHTMLOutput(out))
 }
 
 // Handler serves the site per request: a trailing slash (or an
@@ -511,21 +420,4 @@ func (s *Site) Handler() http.Handler {
 		}
 		http.NotFound(w, r)
 	})
-}
-
-func copyFile(dst, src string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	if _, err := io.Copy(out, in); err != nil {
-		return err
-	}
-	return out.Close()
 }

@@ -67,7 +67,7 @@ func BenchmarkParseOnly(b *testing.B) {
 //
 // pages/s counts rendered pages (posts + index), not opaque files.
 func BenchmarkBuildBlog(b *testing.B) {
-	for _, n := range []int{10, 100, 1000} {
+	for _, n := range []int{10, 100, 1000, 10000} {
 		b.Run(fmt.Sprint(n), func(b *testing.B) {
 			site := b.TempDir()
 			if err := testsites.Blog(site, n); err != nil {

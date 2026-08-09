@@ -82,7 +82,12 @@ func (o *Operation) Build(out string) (int, error) {
 	if err := o.ready(OperationBuild); err != nil {
 		return 0, err
 	}
-	return o.Project.Site().Build(out)
+	site := o.Project.Site()
+	plan, err := site.PlanContext(o.operationContext())
+	if err != nil {
+		return 0, err
+	}
+	return site.BuildWith(o.operationContext(), plan, NewHTMLOutput(out))
 }
 
 // Handler returns the operation's project handler. It checks both the
