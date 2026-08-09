@@ -57,6 +57,12 @@ func (s *Site) render(w io.Writer, rel string) error {
 }
 
 func (s *Site) renderPage(rel string, pages []map[string]any) (*html.Node, []byte, error) {
+	page := &Page{RelPath: rel, URLPath: urlPath(rel)}
+	return s.renderPageWithHook(context.Background(), page, pages, nil)
+}
+
+func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, hook PageDocumentHook) (*html.Node, []byte, error) {
+	rel := page.RelPath
 	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
 	if err != nil {
 		return nil, nil, err
@@ -67,6 +73,11 @@ func (s *Site) renderPage(rel string, pages []map[string]any) (*html.Node, []byt
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("composing %s: %w", rel, err)
+		}
+	}
+	if hook != nil {
+		if err := hook(ctx, page, doc); err != nil {
+			return nil, nil, err
 		}
 	}
 	data, err := s.Data()

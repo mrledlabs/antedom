@@ -69,10 +69,17 @@ antedom never ships project extensions.
   scaling cliff somewhere around 100,000 pages. It also belongs to the
   no-extension baseline, so the experiment below must not misattribute it to
   extension overhead.
+- The first extension MVP slice is implemented for project builds: an optional
+  `antedom.js`, one build-scoped Sobek runtime, an enforced
+  `antedom.apiVersion(1)` compatibility gate, registration-order
+  `page:document` hooks, deeply frozen page paths and metadata, and an opaque
+  document handle. Configuration and hook errors include the extension file,
+  hook, and page context.
 
 Rendering is still sequential. Serve mode still discovers the current page
-list per request. There is no extension runtime, hook registry, module loader,
-capability registry, multi-output fan-out, or incremental dependency graph yet.
+list per request. The MVP extension is not used by `serve` or `new`. There is
+no module loader, Go capability registry, multi-output fan-out, or incremental
+dependency graph yet.
 
 ## Project configuration
 
@@ -508,7 +515,8 @@ Benchmark four configurations of generated sites at 100, 1,000, and 10,000
 pages:
 
 1. No configuration file: establishes the current build baseline.
-2. An empty configuration file: measures runtime creation and script loading.
+2. A minimal `antedom.apiVersion(1)` configuration: measures runtime creation
+   and script loading. A truly empty configuration is invalid.
 3. A no-op `page:document` hook: isolates one JS round trip per page.
 4. Go-backed highlighting plus the JSON manifest: measures the representative
    extension workload and output fan-out.
@@ -536,14 +544,35 @@ First allow JavaScript to register a Go transformer once, so workers invoke Go
 directly for each page. That alternative still preserves JavaScript
 configuration while removing Sobek from the page hot loop.
 
+### Initial extension benchmark
+
+The first one-iteration ARM64 development benchmark produced these directional
+10,000-post results:
+
+| Configuration | Time | Pages/second | Time/page | Allocated bytes |
+| --- | ---: | ---: | ---: | ---: |
+| No `antedom.js` | 1.38 s | 7,235 | 138.2 µs | 772 MB |
+| Minimal `apiVersion(1)` | 1.45 s | 6,906 | 144.8 µs | 775 MB |
+| One no-op page hook | 1.59 s | 6,273 | 159.4 µs | 924 MB |
+
+The minimal configuration added about 5% in this sample. The complete no-op
+page boundary added about 15%, or roughly 21 µs/page, and substantial
+allocation. The 1,000-post result showed a similar percentage. This misses the
+provisional 10% gate and identifies frozen page-export construction plus the
+per-page Sobek call as the next performance question. Repeat benchmarks should
+separate those two costs before choosing between optimizing the export and
+switching the hot loop to registered Go transforms.
+
 ## Implementation sequence
 
 1. **Complete:** extract project and operation layers from the CLI without
    adding JavaScript extensions.
 2. **Complete:** introduce lightweight `Page` and `BuildPlan` models and
    first-class HTML output while preserving current behavior.
-3. Implement the proof-of-concept MVP above and benchmark it before expanding
-   the public API.
+3. **In progress:** the project script, API gate, and no-op page hook are
+   implemented and benchmarked. Add the Go-backed highlighter and decide
+   whether it should be called through each JS hook or registered once as a Go
+   transform.
 4. If the experiment succeeds, replace the single script loader with the
    extension runtime, module resolver, and stable `defineProject()` API.
    Include a build-level data hook that injects values into template scope —

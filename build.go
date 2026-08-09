@@ -59,6 +59,15 @@ type RenderedPage struct {
 	HTML     []byte
 }
 
+// PageDocumentHook runs after layout composition and before template
+// directives and serialization. The document is valid only during the call.
+type PageDocumentHook func(context.Context, *Page, *html.Node) error
+
+// BuildOptions supplies optional build-pipeline behavior.
+type BuildOptions struct {
+	PageDocument PageDocumentHook
+}
+
 // Output consumes a build incrementally. Commit publishes a successful build;
 // Abort cleans up after any earlier failure.
 type Output interface {
@@ -177,6 +186,11 @@ func (s *Site) PlanContext(ctx context.Context) (*BuildPlan, error) {
 // BuildWith renders a previously discovered plan into output. Page DOMs and
 // bytes are released after each WritePage call.
 func (s *Site) BuildWith(ctx context.Context, plan *BuildPlan, output Output) (pages int, err error) {
+	return s.BuildWithOptions(ctx, plan, output, BuildOptions{})
+}
+
+// BuildWithOptions is BuildWith with optional pipeline hooks.
+func (s *Site) BuildWithOptions(ctx context.Context, plan *BuildPlan, output Output, options BuildOptions) (pages int, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -208,7 +222,7 @@ func (s *Site) BuildWith(ctx context.Context, plan *BuildPlan, output Output) (p
 		if err = ctx.Err(); err != nil {
 			return pages, err
 		}
-		doc, body, renderErr := s.renderPage(page.RelPath, plan.pageData)
+		doc, body, renderErr := s.renderPageWithHook(ctx, page, plan.pageData, options.PageDocument)
 		if renderErr != nil {
 			return pages, renderErr
 		}

@@ -82,12 +82,20 @@ func (o *Operation) Build(out string) (int, error) {
 	if err := o.ready(OperationBuild); err != nil {
 		return 0, err
 	}
+	extension, err := loadProjectExtension(o.Project.Root)
+	if err != nil {
+		return 0, err
+	}
 	site := o.Project.Site()
 	plan, err := site.PlanContext(o.operationContext())
 	if err != nil {
 		return 0, err
 	}
-	return site.BuildWith(o.operationContext(), plan, NewHTMLOutput(out))
+	options := BuildOptions{}
+	if extension != nil {
+		options.PageDocument = extension.pageDocument
+	}
+	return site.BuildWithOptions(o.operationContext(), plan, NewHTMLOutput(out), options)
 }
 
 // Handler returns the operation's project handler. It checks both the

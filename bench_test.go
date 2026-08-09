@@ -7,6 +7,7 @@ import (
 	htmltmpl "html/template"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"golang.org/x/net/html"
@@ -87,6 +88,46 @@ func BenchmarkBuildBlog(b *testing.B) {
 			b.ReportMetric(float64(pages)/b.Elapsed().Seconds(), "pages/s")
 			b.ReportMetric(b.Elapsed().Seconds(), "wall-s")
 		})
+	}
+}
+
+// Extension overhead through the same generated-site build. "minimal" loads
+// the runtime but registers nothing; "noop-hook" also crosses the complete
+// read-only page boundary once per page.
+//
+//	go test -run '^$' -bench 'BuildBlogExtension' -benchtime=1x -benchmem
+func BenchmarkBuildBlogExtension(b *testing.B) {
+	configs := map[string]string{
+		"minimal":   `antedom.apiVersion(1);`,
+		"noop-hook": `antedom.apiVersion(1); antedom.on("page:document", () => {});`,
+	}
+	for _, n := range []int{100, 1000, 10000} {
+		for name, config := range configs {
+			b.Run(fmt.Sprintf("%d/%s", n, name), func(b *testing.B) {
+				site := b.TempDir()
+				if err := testsites.Blog(site, n); err != nil {
+					b.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(site, "antedom.js"), []byte(config), 0o666); err != nil {
+					b.Fatal(err)
+				}
+				op := NewProject(site).Operation(context.Background(), OperationBuild)
+				b.ReportAllocs()
+				b.ResetTimer()
+				pages := 0
+				for b.Loop() {
+					built, err := op.Build(b.TempDir())
+					if err != nil {
+						b.Fatal(err)
+					}
+					pages += built
+				}
+				elapsed := b.Elapsed()
+				b.ReportMetric(float64(pages)/elapsed.Seconds(), "pages/s")
+				b.ReportMetric(float64(elapsed.Microseconds())/float64(pages), "us/page")
+				b.ReportMetric(elapsed.Seconds(), "wall-s")
+			})
+		}
 	}
 }
 
