@@ -146,3 +146,70 @@ antedom.on("page:document", (page) => {
 		}
 	}
 }
+
+func TestProjectExtensionHighlightsLiteralDocumentOnly(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"pages", "layout/shortcode"} {
+		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(dir)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files := map[string]string{
+		"layout/base.html":                `<html><body><main ante:slot></main></body></html>`,
+		"layout/shortcode/generated.html": `<pre><code class="language-go">package generated</code></pre>`,
+		"pages/index.md": `<script ante:meta type="application/json">
+{"title":"Highlight", "layout":"base.html"}
+</script>
+
+` + "```go\npackage literal\n```" + `
+
+<shortcode-generated></shortcode-generated>
+`,
+	}
+	for name, src := range files {
+		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(name)), []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+antedom.on("page:document", (page) => {
+  const count = page.document.highlight({style: "github", missingLanguage: "error"});
+  if (count !== 1) throw new Error(`+"`expected one literal block, got ${count}`"+`);
+});
+`)
+	out := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(body)
+	if !strings.Contains(result, `<code class="language-go"><span`) || !strings.Contains(result, `>package</span>`) {
+		t.Fatalf("literal code was not highlighted: %s", result)
+	}
+	if !strings.Contains(result, `<code class="language-go">package generated</code>`) {
+		t.Fatalf("shortcode-generated code was unexpectedly highlighted: %s", result)
+	}
+}
+
+func TestProjectExtensionDocumentHandleExpires(t *testing.T) {
+	root := t.TempDir()
+	if err := testsites.Blog(root, 1); err != nil {
+		t.Fatal(err)
+	}
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+let saved;
+antedom.on("page:document", (page) => {
+  if (saved) saved.highlight();
+  saved = page.document;
+});
+`)
+	_, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "document handle has expired") {
+		t.Fatalf("expired document handle error = %v", err)
+	}
+}

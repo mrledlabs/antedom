@@ -3,6 +3,7 @@ module github.com/mrled/antedom
 go 1.25.0
 
 require (
+	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/grafana/sobek v0.0.0-20260727154728-7781506a890f
 	github.com/spf13/cobra v1.10.2
 	github.com/yuin/goldmark v1.8.5

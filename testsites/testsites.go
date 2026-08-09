@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -72,12 +73,27 @@ const blogPost = `<script ante:meta type="application/json">
 </script>
 
 %s %s
+
+%s
 `
+
+// BlogOptions controls optional benchmark features.
+type BlogOptions struct {
+	CodeBlocks int
+	Extension  string
+}
 
 // Blog writes a blog-shaped project to dir: an index page listing
 // every post, and n two-sentence markdown posts under posts/, all
 // sugar pages composed into one base layout.
 func Blog(dir string, n int) error {
+	return BlogWithOptions(dir, n, BlogOptions{})
+}
+
+// BlogWithOptions is Blog with optional fenced code blocks per post and a
+// project extension. Code blocks make highlighting cost independently
+// measurable without changing the default benchmark fixture.
+func BlogWithOptions(dir string, n int, options BlogOptions) error {
 	for _, d := range []string{"pages/posts", "layout", "data"} {
 		if err := os.MkdirAll(filepath.Join(dir, filepath.FromSlash(d)), 0o777); err != nil {
 			return err
@@ -92,15 +108,29 @@ func Blog(dir string, n int) error {
 			return err
 		}
 	}
+	if options.Extension != "" {
+		if err := os.WriteFile(filepath.Join(dir, "antedom.js"), []byte(options.Extension), 0o666); err != nil {
+			return err
+		}
+	}
 	epoch := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i := range n {
 		post := fmt.Sprintf(blogPost,
 			i+1, epoch.AddDate(0, 0, i).Format("2006-01-02"),
-			sentences[i%len(sentences)], sentences[(i+1)%len(sentences)])
+			sentences[i%len(sentences)], sentences[(i+1)%len(sentences)],
+			blogCodeBlocks(options.CodeBlocks))
 		name := fmt.Sprintf("post-%04d.md", i+1)
 		if err := os.WriteFile(filepath.Join(dir, "pages", "posts", name), []byte(post), 0o666); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func blogCodeBlocks(count int) string {
+	var out strings.Builder
+	for i := range count {
+		fmt.Fprintf(&out, "```go\nfunc example%d() string { return %q }\n```\n\n", i, sentences[i%len(sentences)])
+	}
+	return out.String()
 }

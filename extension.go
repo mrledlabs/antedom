@@ -85,14 +85,15 @@ func (e *projectExtension) on(call sobek.FunctionCall) sobek.Value {
 	return sobek.Undefined()
 }
 
-func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html.Node) error {
+func (e *projectExtension) pageDocument(ctx context.Context, page *Page, doc *html.Node) error {
 	if e == nil || len(e.hooks) == 0 {
 		return nil
 	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	document := e.readOnlyObject(nil) // Opaque until Go-backed DOM operations arrive.
+	document := e.documentValue(doc)
+	defer func() { document.doc = nil }()
 	pageValue := map[string]any{
 		"sourcePath": page.SourcePath,
 		"relPath":    page.RelPath,
@@ -100,7 +101,7 @@ func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html
 		"outputPath": page.OutputPath,
 		"format":     string(page.Format),
 		"meta":       page.Meta,
-		"document":   document,
+		"document":   document.value,
 	}
 	v := e.readOnlyValue(pageValue)
 	for _, hook := range e.hooks {
@@ -112,6 +113,51 @@ func (e *projectExtension) pageDocument(ctx context.Context, page *Page, _ *html
 		}
 	}
 	return nil
+}
+
+func (e *projectExtension) documentValue(doc *html.Node) *documentHandle {
+	handle := &documentHandle{doc: doc}
+	highlight := e.vm.ToValue(func(call sobek.FunctionCall) sobek.Value {
+		if handle.doc == nil {
+			panic(e.vm.NewTypeError("page document handle has expired"))
+		}
+		options := defaultHighlightOptions()
+		arg := call.Argument(0)
+		if arg != sobek.Undefined() {
+			obj, ok := arg.(*sobek.Object)
+			if !ok || sobek.IsNull(arg) {
+				panic(e.vm.NewTypeError("document.highlight options must be an object"))
+			}
+			for _, key := range obj.Keys() {
+				switch key {
+				case "style", "missingLanguage":
+				default:
+					panic(e.vm.NewTypeError("unknown document.highlight option %q", key))
+				}
+			}
+			if value := obj.Get("style"); value != nil && value != sobek.Undefined() {
+				options.Style = value.String()
+			}
+			if value := obj.Get("missingLanguage"); value != nil && value != sobek.Undefined() {
+				options.MissingLanguage = value.String()
+			}
+		}
+		if options.MissingLanguage != "ignore" && options.MissingLanguage != "error" {
+			panic(e.vm.NewTypeError("document.highlight missingLanguage must be %q or %q", "ignore", "error"))
+		}
+		count, err := highlightDocument(handle.doc, options)
+		if err != nil {
+			panic(e.vm.NewGoError(err))
+		}
+		return e.vm.ToValue(count)
+	})
+	handle.value = e.readOnlyObject(map[string]any{"highlight": highlight})
+	return handle
+}
+
+type documentHandle struct {
+	doc   *html.Node
+	value sobek.Value
 }
 
 // readOnlyValue exposes JSON-shaped Go data through small host-backed views.

@@ -75,6 +75,10 @@ antedom never ships project extensions.
   `page:document` hooks, deeply read-only host-backed page paths and metadata,
   and an opaque document handle. Configuration and hook errors include the
   extension file, hook, and page context.
+- The opaque document handle now provides Go-backed syntax highlighting for
+  literal `<pre><code class="language-*">` blocks. JavaScript selects the
+  style and missing-language policy, while DOM traversal, lexing, formatting,
+  and replacement remain in Go.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `serve` or `new`. There is
@@ -477,6 +481,16 @@ Support only:
 - Registration order only, with useful filenames, hook names, page paths, JS
   stacks, and Go causes in errors.
 
+`page:document` runs after Markdown parsing and layout composition but before
+antedom directives and shortcode expansion. Automatic highlighting therefore
+applies to literal source and Markdown fenced-code blocks only. Content later
+introduced or replaced by directive evaluation (`ante:html`, `ante:text`) or
+shortcode expansion is not rescanned automatically; the code that generates
+such content must use an explicit highlighting operation. A string/fragment
+highlighting capability can be added when a concrete generator needs it. This
+keeps the phase predictable and avoids adding a speculative final-output DOM
+hook.
+
 `antedom.apiVersion` is a call rather than a declaration in the script form,
 so the loader must enforce it: if `antedom.js` exists but never calls
 `apiVersion`, or calls it after registering a hook or output, the build fails.
@@ -576,10 +590,10 @@ absolute per-page cost as the more durable metric.
    adding JavaScript extensions.
 2. **Complete:** introduce lightweight `Page` and `BuildPlan` models and
    first-class HTML output while preserving current behavior.
-3. **In progress:** the project script, API gate, and no-op page hook are
-   implemented and benchmarked. Add the Go-backed highlighter and decide
-   whether it should be called through each JS hook or registered once as a Go
-   transform.
+3. **In progress:** the project script, API gate, page hook, and Go-backed
+   highlighter are implemented and benchmarkable. The optimized per-page JS
+   boundary is inside the provisional performance gate. Complete the MVP with
+   synchronous output fan-out and a JSON manifest.
 4. If the experiment succeeds, replace the single script loader with the
    extension runtime, module resolver, and stable `defineProject()` API.
    Include a build-level data hook that injects values into template scope —

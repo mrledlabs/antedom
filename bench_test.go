@@ -131,6 +131,44 @@ func BenchmarkBuildBlogExtension(b *testing.B) {
 	}
 }
 
+// Go-backed highlighting with zero, one, and several fenced code blocks per
+// post. This separates hook/traversal overhead from work that should scale with
+// the number and size of code blocks.
+//
+//	go test -run '^$' -bench 'BuildBlogHighlight' -benchtime=1x -benchmem
+func BenchmarkBuildBlogHighlight(b *testing.B) {
+	const extension = `antedom.apiVersion(1);
+antedom.on("page:document", page => page.document.highlight({style: "github"}));`
+	for _, n := range []int{100, 1000, 10000} {
+		for _, blocks := range []int{0, 1, 3} {
+			b.Run(fmt.Sprintf("%d/%d-blocks", n, blocks), func(b *testing.B) {
+				site := b.TempDir()
+				if err := testsites.BlogWithOptions(site, n, testsites.BlogOptions{
+					CodeBlocks: blocks,
+					Extension:  extension,
+				}); err != nil {
+					b.Fatal(err)
+				}
+				op := NewProject(site).Operation(context.Background(), OperationBuild)
+				b.ReportAllocs()
+				b.ResetTimer()
+				pages := 0
+				for b.Loop() {
+					built, err := op.Build(b.TempDir())
+					if err != nil {
+						b.Fatal(err)
+					}
+					pages += built
+				}
+				elapsed := b.Elapsed()
+				b.ReportMetric(float64(pages)/elapsed.Seconds(), "pages/s")
+				b.ReportMetric(float64(elapsed.Microseconds())/float64(pages), "us/page")
+				b.ReportMetric(elapsed.Seconds(), "wall-s")
+			})
+		}
+	}
+}
+
 // The same page as a Go html/template — roughly what Hugo executes.
 func BenchmarkGoHTMLTemplate(b *testing.B) {
 	tmpl := htmltmpl.Must(htmltmpl.New("p").Parse(`<!DOCTYPE html>
