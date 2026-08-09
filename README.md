@@ -10,3 +10,19 @@ go run ./cmd/antedom build --site docs -o out  # render it to out/
 go run ./cmd/antedom new posts/hello --site docs   # scaffold pages/posts/hello.md
 go test ./...
 ```
+
+## Development
+
+For a serve loop that also restarts on Go source changes, install
+[air](https://github.com/air-verse/air) and run it from the repo root:
+
+```sh
+go install github.com/air-verse/air@latest
+air
+```
+
+It builds to `bin/$(go env GOOS)-$(go env GOARCH)/antedom` and re-runs
+`serve --site docs` on any non-test `.go` change (see [.air.toml](.air.toml)).
+The per-platform path keeps macOS and Linux/Docker builds from clobbering
+each other. Content changes under `docs/` are handled by `serve`'s own
+live reload and don't trigger a rebuild.
