@@ -174,7 +174,7 @@ func TestProjectExtensionHighlightsLiteralDocumentOnly(t *testing.T) {
 	writeExtension(t, root, `
 antedom.apiVersion(1);
 antedom.on("page:document", (page) => {
-  const count = page.document.highlight({style: "github", missingLanguage: "error"});
+  const count = page.document.highlight({style: "github", unknownLanguage: "error"});
   if (count !== 1) throw new Error(`+"`expected one literal block, got ${count}`"+`);
 });
 `)
@@ -192,6 +192,54 @@ antedom.on("page:document", (page) => {
 	}
 	if !strings.Contains(result, `<code class="language-go">package generated</code>`) {
 		t.Fatalf("shortcode-generated code was unexpectedly highlighted: %s", result)
+	}
+}
+
+func TestProjectExtensionHighlightErrors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		call string
+		want string
+	}{
+		"non-object options": {
+			call: `page.document.highlight(42)`,
+			want: "document.highlight options must be an object",
+		},
+		"null options": {
+			call: `page.document.highlight(null)`,
+			want: "document.highlight options must be an object",
+		},
+		"unknown option": {
+			call: `page.document.highlight({bogus: true})`,
+			want: `unknown document.highlight option "bogus"`,
+		},
+		"bad unknownLanguage": {
+			call: `page.document.highlight({unknownLanguage: "explode"})`,
+			want: `unknownLanguage must be "ignore" or "error"`,
+		},
+		"unknown style": {
+			call: `page.document.highlight({style: "no-such-style"})`,
+			want: `unknown highlight style "no-such-style"`,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			if err := testsites.Blog(root, 1); err != nil {
+				t.Fatal(err)
+			}
+			writeExtension(t, root, `
+antedom.apiVersion(1);
+antedom.on("page:document", (page) => { `+tc.call+`; });
+`)
+			_, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(t.TempDir())
+			if err == nil {
+				t.Fatal("bad highlight call did not fail the build")
+			}
+			for _, want := range []string{tc.want, "antedom.js", `hook "page:document"`} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error %q lacks %q", err, want)
+				}
+			}
+		})
 	}
 }
 

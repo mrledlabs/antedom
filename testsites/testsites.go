@@ -73,8 +73,6 @@ const blogPost = `<script ante:meta type="application/json">
 </script>
 
 %s %s
-
-%s
 `
 
 // BlogOptions controls optional benchmark features.
@@ -117,8 +115,10 @@ func BlogWithOptions(dir string, n int, options BlogOptions) error {
 	for i := range n {
 		post := fmt.Sprintf(blogPost,
 			i+1, epoch.AddDate(0, 0, i).Format("2006-01-02"),
-			sentences[i%len(sentences)], sentences[(i+1)%len(sentences)],
-			blogCodeBlocks(options.CodeBlocks))
+			sentences[i%len(sentences)], sentences[(i+1)%len(sentences)])
+		if blocks := blogCodeBlocks(options.CodeBlocks); blocks != "" {
+			post += "\n" + blocks
+		}
 		name := fmt.Sprintf("post-%04d.md", i+1)
 		if err := os.WriteFile(filepath.Join(dir, "pages", "posts", name), []byte(post), 0o666); err != nil {
 			return err

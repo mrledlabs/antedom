@@ -15,16 +15,21 @@ import (
 
 type highlightOptions struct {
 	Style           string
-	MissingLanguage string
+	UnknownLanguage string
 }
 
 func defaultHighlightOptions() highlightOptions {
-	return highlightOptions{Style: "github", MissingLanguage: "ignore"}
+	return highlightOptions{Style: "github", UnknownLanguage: "ignore"}
 }
 
 // highlightDocument highlights literal <pre><code class="language-*"> blocks
 // in doc. It runs before antedom directives and shortcodes, so content they
 // generate later must request highlighting explicitly.
+//
+// Calling it again (for example from a second hook) matches highlighted
+// blocks anew: the language class survives, text content round-trips through
+// the token spans, and the block is re-highlighted and re-counted with the
+// later call's style. The MVP accepts that rather than marking blocks done.
 func highlightDocument(doc *html.Node, options highlightOptions) (int, error) {
 	style, ok := styles.Registry[strings.ToLower(options.Style)]
 	if !ok {
@@ -40,7 +45,7 @@ func highlightDocument(doc *html.Node, options highlightOptions) (int, error) {
 			if language != "" {
 				lexer := lexers.Get(language)
 				if lexer == nil {
-					if options.MissingLanguage == "error" {
+					if options.UnknownLanguage == "error" {
 						return fmt.Errorf("unknown highlight language %q", language)
 					}
 				} else {

@@ -49,7 +49,7 @@ func TestHighlightDocumentOptions(t *testing.T) {
 		t.Fatalf("ignored missing language = (%d, %v), want (0, nil)", count, err)
 	}
 	options := defaultHighlightOptions()
-	options.MissingLanguage = "error"
+	options.UnknownLanguage = "error"
 	if _, err := highlightDocument(doc, options); err == nil || !strings.Contains(err.Error(), "no-such-language") {
 		t.Fatalf("missing-language error = %v", err)
 	}

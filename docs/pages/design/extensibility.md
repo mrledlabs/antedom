@@ -77,13 +77,66 @@ antedom never ships project extensions.
   extension file, hook, and page context.
 - The opaque document handle now provides Go-backed syntax highlighting for
   literal `<pre><code class="language-*">` blocks. JavaScript selects the
-  style and missing-language policy, while DOM traversal, lexing, formatting,
-  and replacement remain in Go.
+  style and unknown-language policy, while DOM traversal, lexing, formatting,
+  and replacement remain in Go. The highlighter is invoked through each
+  JavaScript hook rather than registered once as a Go transform: the
+  register-once fallback existed for the case where the per-page JS crossing
+  proved too expensive, and at roughly 2 µs per no-op crossing it was not
+  needed.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `serve` or `new`. There is
 no module loader, Go capability registry, multi-output fan-out, or incremental
 dependency graph yet.
+
+## Outstanding MVP work
+
+### Extensions in serve mode
+
+`antedom serve` currently renders through `Site.Handler` without loading
+`antedom.js`, so extension behavior such as highlighting appears in `build`
+output but not development-server responses.
+
+The smallest correct MVP implementation is to load a fresh extension runtime
+for each rendered page request, discover the current `Page`, and invoke the
+same hook-enabled render path used by a build. Static assets should bypass
+extension loading. This has useful development semantics:
+
+- concurrent requests have isolated Sobek runtimes;
+- edits to `antedom.js` take effect on the next request;
+- a broken extension returns a contextual HTTP 500 without crashing the
+  server; and
+- there is no mutex, stale callback state, or runtime-replacement protocol.
+
+The cost is parsing and evaluating `antedom.js` per rendered request. Benchmark
+request latency with no configuration, a minimal configuration, a no-op hook,
+and highlighting. If runtime loading is material, replace this with a cached,
+mutex-protected runtime that is atomically recreated when the configuration
+changes. That optimization also requires deciding whether extension state is
+expected to persist across requests.
+
+Implementation requires a hook-aware `Site.HandlerWithOptions` (with the
+existing `Handler` delegating to empty options) and request rendering against
+the discovered `Page`, so serve hooks receive the same paths and metadata as
+build hooks.
+
+### Repeated highlighting
+
+Repeated `page.document.highlight()` calls are currently allowed but their
+semantics are not yet locked down. A highlighted `<code>` retains its
+`language-*` class, so a second call matches it again, extracts the text from
+the generated spans, tokenizes it again, and reports it in the returned count.
+This should usually produce equivalent HTML, but it repeats work and makes the
+meaning of the count surprising when two hooks independently enable
+highlighting.
+
+Before treating the API as stable, make highlighting idempotent within one
+document handle: track highlighted code nodes in Go, skip them on later calls,
+and define the return value as the number of newly highlighted blocks. A
+second identical call should return zero and leave serialized output unchanged.
+Tests should cover one hook calling twice, two hooks calling once each, and a
+second call with different options. The last case needs an explicit rule;
+the simplest MVP rule is that the first successful highlighting wins.
 
 ## Project configuration
 
@@ -490,6 +543,16 @@ such content must use an explicit highlighting operation. A string/fragment
 highlighting capability can be added when a concrete generator needs it. This
 keeps the phase predictable and avoids adding a speculative final-output DOM
 hook.
+
+Repeated `highlight` calls on the same document are possible: two registered
+hooks may each call it, or one hook may call it more than once. A highlighted
+block keeps its `language-*` class, so a later call matches the block again,
+re-tokenizes its text content, replaces the earlier token spans, and counts
+the block again. Text content round-trips, so output remains correct, but the
+work is repeated, the last call's style wins, and returned counts include
+already-highlighted blocks. The MVP deliberately does not detect or skip
+previously highlighted blocks; if repeated calls become a real pattern, a
+marker class or handle-level memo can address it later.
 
 `antedom.apiVersion` is a call rather than a declaration in the script form,
 so the loader must enforce it: if `antedom.js` exists but never calls

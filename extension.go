@@ -123,27 +123,27 @@ func (e *projectExtension) documentValue(doc *html.Node) *documentHandle {
 		}
 		options := defaultHighlightOptions()
 		arg := call.Argument(0)
-		if arg != sobek.Undefined() {
+		if !sobek.IsUndefined(arg) {
 			obj, ok := arg.(*sobek.Object)
 			if !ok || sobek.IsNull(arg) {
 				panic(e.vm.NewTypeError("document.highlight options must be an object"))
 			}
 			for _, key := range obj.Keys() {
 				switch key {
-				case "style", "missingLanguage":
+				case "style", "unknownLanguage":
 				default:
 					panic(e.vm.NewTypeError("unknown document.highlight option %q", key))
 				}
 			}
-			if value := obj.Get("style"); value != nil && value != sobek.Undefined() {
+			if value := obj.Get("style"); value != nil && !sobek.IsUndefined(value) {
 				options.Style = value.String()
 			}
-			if value := obj.Get("missingLanguage"); value != nil && value != sobek.Undefined() {
-				options.MissingLanguage = value.String()
+			if value := obj.Get("unknownLanguage"); value != nil && !sobek.IsUndefined(value) {
+				options.UnknownLanguage = value.String()
 			}
 		}
-		if options.MissingLanguage != "ignore" && options.MissingLanguage != "error" {
-			panic(e.vm.NewTypeError("document.highlight missingLanguage must be %q or %q", "ignore", "error"))
+		if options.UnknownLanguage != "ignore" && options.UnknownLanguage != "error" {
+			panic(e.vm.NewTypeError("document.highlight unknownLanguage must be %q or %q", "ignore", "error"))
 		}
 		count, err := highlightDocument(handle.doc, options)
 		if err != nil {
