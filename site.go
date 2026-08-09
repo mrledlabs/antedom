@@ -30,6 +30,8 @@ type Site struct {
 	Pages string
 	// Layout is a directory of layout templates, named by ante:layout
 	// attributes (see docs/templating.md); empty disables composition.
+	// Its shortcode/ subdirectory holds shortcode templates, one
+	// <name>.html per shortcode-<name> element (see shortcode.go).
 	Layout string
 	// Data assembles the JS scope shared by every page. It is called
 	// per render so serve mode always sees fresh data; it must return
@@ -73,6 +75,11 @@ func (s *Site) render(w io.Writer, rel string) error {
 	engine, err := New()
 	if err != nil {
 		return err
+	}
+	if s.Layout != "" {
+		engine.Shortcodes = func(name string) ([]byte, error) {
+			return os.ReadFile(filepath.Join(s.Layout, "shortcode", name+".html"))
+		}
 	}
 	if err := engine.RenderDoc(w, doc, data); err != nil {
 		return fmt.Errorf("rendering %s: %w", rel, err)

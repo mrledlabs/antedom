@@ -5,7 +5,9 @@
     "ante:text",
     "ante:html",
     "ante:name bound attributes",
+    "ante:scope scripts",
     "ante:layout / ante:slot / ante:fill",
+    "shortcodes",
     "markdown pages"
   ]
 }

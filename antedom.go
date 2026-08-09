@@ -8,6 +8,10 @@
 //	ante:keep               on a <template>: process it but keep the element
 //	ante:meta               page metadata (see Site.pageList): the element
 //	                     is dropped from output, subtree unevaluated
+//	ante:scope              on a <script>: run the body at build time; its
+//	                     top-level declarations become scope variables for
+//	                     the following siblings and their subtrees, and the
+//	                     element is dropped (see scope.go)
 //	ante:layout / ante:slot / ante:fill   composition markers, consumed
 //	                     by Compose before the walk (see docs/templating.md)
 //	ante:if="expr"          remove the element unless expr is truthy
@@ -23,6 +27,14 @@
 // <template> is the client's: shipped verbatim, contents untouched.
 // ante:keep processes a template's directives and contents but keeps
 // the element, for client-bound templates that need build-time logic.
+//
+// An element named shortcode-<name> is an inert web component: after
+// its own directives run it is replaced by the template
+// Engine.Shortcodes loads for name — for a Site,
+// layout/shortcode/<name>.html — evaluated in a child scope where
+// each attribute is a variable and children is the element's rendered
+// inner HTML (see shortcode.go).
+//
 // Because output is serialized from the parsed tree, it is well-formed
 // by construction and all interpolation is contextually escaped.
 package antedom
@@ -51,6 +63,11 @@ type Engine struct {
 	vm      *sobek.Runtime
 	exprs   map[string]sobek.Callable
 	mkScope sobek.Callable // Object.create, for prototype-chained scopes
+	depth   int            // current shortcode expansion depth
+
+	// Shortcodes loads the template source behind a shortcode-<name>
+	// element (see shortcode.go); nil makes any such element an error.
+	Shortcodes func(name string) ([]byte, error)
 }
 
 func New() (*Engine, error) {
@@ -138,7 +155,25 @@ func (e *Engine) walkChildren(n *html.Node, scope *sobek.Object) error {
 			kids = append(kids, c)
 		}
 	}
-	for _, c := range kids {
+	return e.walkSiblings(kids, scope)
+}
+
+// walkSiblings processes elements in document order. A <script
+// ante:scope> advances the scope for the elements after it (see
+// scope.go), which is why the walk threads scope through the list.
+func (e *Engine) walkSiblings(nodes []*html.Node, scope *sobek.Object) error {
+	for _, c := range nodes {
+		if c.Type != html.ElementNode {
+			continue
+		}
+		if _, ok := takeAttr(c, Prefix+"scope"); ok {
+			next, err := e.runScope(c, scope)
+			if err != nil {
+				return err
+			}
+			scope = next
+			continue
+		}
 		if err := e.element(c, scope); err != nil {
 			return err
 		}
@@ -231,6 +266,9 @@ func (e *Engine) apply(n *html.Node, scope *sobek.Object, consume bool) error {
 	}
 	n.Attr = attrs
 
+	if strings.HasPrefix(n.Data, ShortcodePrefix) {
+		return e.expandShortcode(n, scope)
+	}
 	if consume {
 		unwrap(n)
 	}

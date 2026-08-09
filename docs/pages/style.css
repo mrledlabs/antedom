@@ -43,8 +43,40 @@ nav a {
 nav a[aria-current] { background: var(--accent-bg); font-weight: bold; }
 
 .content { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+pre { overflow-x: auto; }
 a { color: var(--accent); }
 .callout { border-left: 4px solid var(--accent); padding: 0 1rem; background: var(--accent-bg); }
+
+figure.quotefig {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--accent-bg);
+  position: relative;
+}
+figure.quotefig::before {
+  content: "\201C";
+  position: absolute;
+  top: -0.4rem;
+  right: 0.75rem;
+  font-size: 4rem;
+  font-family: Georgia, serif;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.35;
+}
+figure.quotefig blockquote {
+  margin: 0;
+  font-style: italic;
+}
+figure.quotefig blockquote p { margin: 0; }
+figure.quotefig figcaption {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+figure.quotefig figcaption::before { content: "— "; }
 
 .post { border-left: 4px solid var(--accent-bg); padding-left: 1rem; }
 .byline { color: var(--muted); font-style: italic; }

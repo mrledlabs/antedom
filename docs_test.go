@@ -35,8 +35,8 @@ func TestDocsSite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pages != 10 {
-		t.Errorf("built %d pages, want 10", pages)
+	if pages != 12 {
+		t.Errorf("built %d pages, want 12", pages)
 	}
 	for name, wants := range map[string][]string{
 		"index.html": {
@@ -46,7 +46,7 @@ func TestDocsSite(t *testing.T) {
 			`<a href="/templating/">Templating</a>`,       // title from that page's metadata
 			"<h1>antedom</h1>",                            // the layout renders the metadata title
 			`<a href="templating/">`,
-			"<code>7</code> directives", // inline directive mid-markdown
+			"<code>9</code> directives", // inline directive mid-markdown
 			"<footer>rendered test</footer>",
 		},
 		"templating/index.html": {
@@ -58,6 +58,16 @@ func TestDocsSite(t *testing.T) {
 		"markdown/index.html": {
 			"<h1>Markdown pages</h1>",
 			"<code>`&lt;div&gt;`</code>", // inline code keeps tags
+		},
+		"shortcodes/index.html": {
+			"<title>antedom: Shortcodes</title>",
+			// The live example, expanded from layout/shortcode/quotefig.html;
+			// the figcaption link is built by its ante:scope script.
+			`<blockquote cite="https://ask.metafilter.com/55153/Whats-the-middle-ground-between-FU-and-Welcome#830421">`,
+			"<p>\n  This is a classic case of Ask Culture meets Guess Culture.\n</p>",
+			`<figcaption><a href="https://ask.metafilter.com/55153/Whats-the-middle-ground-between-FU-and-Welcome#830421">tangerine on MetaFilter</a></figcaption>`,
+			// Fenced examples stay text.
+			"&lt;shortcode-quotefig citeurl=",
 		},
 		"demo/index.html": {
 			"<li>1. ante:if</li>",
@@ -120,7 +130,7 @@ func TestDocsSite(t *testing.T) {
 	last := -1
 	for _, href := range []string{
 		`href="/"`, `href="/templating/"`, `href="/pages/"`, `href="/markdown/"`,
-		`href="/demo/"`, `href="/demo/attributes/"`, `href="/sampleblog/"`,
+		`href="/shortcodes/"`, `href="/demo/"`, `href="/demo/attributes/"`, `href="/sampleblog/"`,
 		`href="/sampleblog/third-post/"`, `href="/sampleblog/second-post/"`,
 		`href="/sampleblog/first-post/"`,
 	} {
