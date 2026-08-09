@@ -38,6 +38,34 @@ output transactions, concurrency, built-in implementations, and diagnostics.
 JavaScript owns project policy, hook registration, lightweight transformations,
 custom commands and scaffolding, and the configuration of Go capabilities.
 
+## Implementation status
+
+The first two foundation steps are implemented. This code is useful even if
+antedom never ships project extensions.
+
+- `Project` and `Operation` now form an application layer above `Site`.
+  `build`, `serve`, and `new` all enter through that layer instead of keeping
+  project behavior in the CLI.
+- Operation contexts establish cancellation boundaries. Build cancellation is
+  propagated through discovery, rendering, and output.
+- A full build discovers pages and parses their metadata once into a
+  lightweight `BuildPlan`. This removes the former quadratic behavior in which
+  every rendered page rebuilt the complete page list.
+- `Page` and `Asset` retain paths and metadata only. Source bytes, parsed DOMs,
+  and rendered HTML have a bounded, per-page lifetime.
+- Outputs are first-class transactional consumers. The existing directory
+  build is implemented by `HTMLOutput` through `Begin`, `WritePage`,
+  `WriteAsset`, `Commit`, and `Abort`.
+- Existing `Site.Build` and CLI behavior remain compatible.
+- The generated-site benchmark covers up to 10,000 posts. A manual synthetic
+  10,001-page build completed in about two seconds in the development
+  environment, including `go run` compilation overhead. This is a useful
+  directional result, not a portable performance guarantee.
+
+Rendering is still sequential. Serve mode still discovers the current page
+list per request. There is no extension runtime, hook registry, module loader,
+capability registry, multi-output fan-out, or incremental dependency graph yet.
+
 ## Project configuration
 
 A project has one known entry point, such as `antedom.js`:
@@ -118,14 +146,11 @@ through a stable page model:
 ```go
 type Page struct {
     SourcePath string
+    RelPath    string
     URLPath    string
     OutputPath string
     Format     SourceFormat
-
     Meta       map[string]any
-    Source     []byte
-    Document   *html.Node
-    Rendered   []byte
 }
 
 type BuildPlan struct {
@@ -134,9 +159,20 @@ type BuildPlan struct {
 }
 ```
 
-The pipeline progressively populates these fields. Hooks then receive coherent
-domain objects rather than unrelated filenames and maps, and outputs consume a
-stable result rather than depending on the HTML-directory implementation.
+The implemented plan deliberately does not progressively retain source, DOM,
+and output fields. Rendering creates a separate ephemeral value:
+
+```go
+type RenderedPage struct {
+    Page     *Page
+    Document *html.Node
+    HTML     []byte
+}
+```
+
+Hooks receive coherent domain objects rather than unrelated filenames and
+maps, while outputs consume a stable interface rather than depending on the
+HTML-directory implementation.
 
 Building the page list once also avoids reparsing every page's metadata for
 each rendered page.
@@ -251,7 +287,6 @@ type RenderedPage struct {
     Page     *Page
     Document *html.Node
     HTML     []byte
-    Data     map[string]any
 }
 ```
 
@@ -381,20 +416,111 @@ ctx.dependencies.watch("data/products.json");
 Go-backed capabilities report their dependencies automatically. This can grow
 into a precise live-reload dependency graph.
 
+## Extension proof-of-concept MVP
+
+The broader design is larger than necessary to answer the two immediate
+questions:
+
+1. Is project-level JavaScript a pleasant way to configure custom behavior?
+2. Is one Sobek callback per page fast enough, and can expensive work stay in
+   Go without retaining every page DOM?
+
+A smaller vertical slice can answer both before implementing modules, custom
+commands, SQLite, dependency ordering, or incremental builds.
+
+### Scope
+
+Load one optional, trusted `antedom.js` file as a plain script for `build` only.
+Do not implement ES modules or imports yet. Install one global host object:
+
+```js
+antedom.apiVersion(1);
+
+antedom.on("page:document", (page) => {
+  if (page.meta.params?.highlight !== false) {
+    page.document.highlight({ style: "github" });
+  }
+});
+
+antedom.output("manifest", antedom.go.jsonManifest({
+  file: "pages.json",
+}));
+```
+
+Support only:
+
+- One extension runtime per build.
+- One hook, `page:document`, called after composition and before serialization.
+- Read-only page paths and metadata exported to JavaScript.
+- An opaque document handle with one Go-backed operation, initially syntax
+  highlighting.
+- One optional Go-backed aggregate output, preferably a JSON manifest rather
+  than SQLite. JSON tests output fan-out and lifecycle without first choosing a
+  SQLite driver or schema API.
+- Registration order only, with useful filenames, hook names, page paths, JS
+  stacks, and Go causes in errors.
+
+The MVP explicitly excludes `new` hooks, serve integration, custom CLI
+commands, relative imports, external packages, generic DOM traversal, hook
+dependency ordering, network and filesystem APIs, concurrency, and incremental
+rebuilds.
+
+The HTML output should remain enabled by default. Add a small fan-out output
+that sends each ephemeral `RenderedPage` synchronously to HTML and manifest
+outputs before releasing it. This proves that aggregate formats fit the output
+contract without holding all rendered pages in memory.
+
+### Why this is enough
+
+The JavaScript callback proves project policy and the Sobek-to-Go call path.
+The highlighter proves that expensive work can be configured in JavaScript but
+executed against the live Go DOM without exporting and reconstructing the
+tree. The manifest proves multiple and aggregate outputs. Together they cross
+every important boundary in the proposed architecture while avoiding most of
+the permanent API surface.
+
+`antedom.js` is intentionally a script in the MVP. Its registration calls can
+later become the implementation behind `defineProject()` and virtual modules;
+the MVP syntax should therefore be documented as experimental.
+
+### Performance experiment
+
+Benchmark four generated sites at 100, 1,000, and 10,000 pages:
+
+1. No configuration file: establishes the current build baseline.
+2. An empty configuration file: measures runtime creation and script loading.
+3. A no-op `page:document` hook: isolates one JS round trip per page.
+4. Go-backed highlighting plus the JSON manifest: measures the representative
+   extension workload and output fan-out.
+
+Report wall time, pages per second, allocations, and peak resident memory.
+Include pages with zero, one, and several code blocks so highlighting cost is
+not confused with hook overhead. A useful initial acceptance target is that an
+empty or no-op extension adds no more than roughly 10% to a 10,000-page build;
+representative highlighting should scale with the number and size of code
+blocks rather than the total site squared.
+
+If the no-op callback is too expensive, do not immediately add concurrency.
+First allow JavaScript to register a Go transformer once, so workers invoke Go
+directly for each page. That alternative still preserves JavaScript
+configuration while removing Sobek from the page hot loop.
+
 ## Implementation sequence
 
-1. Extract project and operation layers from the current CLI without adding
-   JavaScript extensions.
-2. Introduce `Page`, `BuildPlan`, and first-class HTML output while preserving
-   current behavior.
-3. Add the extension runtime, module resolver, API version, and a few build
-   hooks.
-4. Route `new` through a structured request and hooks.
-5. Add Go-backed capability registration.
-6. Implement syntax highlighting end to end.
-7. Add JSON or SQLite output to validate the output abstraction.
-8. Add external extension resolution and richer hook ordering only after those
-   examples work.
+1. **Complete:** extract project and operation layers from the CLI without
+   adding JavaScript extensions.
+2. **Complete:** introduce lightweight `Page` and `BuildPlan` models and
+   first-class HTML output while preserving current behavior.
+3. Implement the proof-of-concept MVP above and benchmark it before expanding
+   the public API.
+4. If the experiment succeeds, replace the single script loader with the
+   extension runtime, module resolver, and stable `defineProject()` API.
+5. Route `new` through a structured request and hooks.
+6. Generalize Go-backed capability registration beyond the MVP highlighter and
+   manifest output.
+7. Add SQLite output to validate transactional non-file-tree output.
+8. Add external extension resolution, richer hook ordering, parallel
+   rendering, and dependency tracking only as demonstrated needs arise.
 
 Syntax highlighting tests page-level DOM transformation and fast Go callbacks.
 SQLite tests aggregate, transactional, non-file-tree output. If both fit
