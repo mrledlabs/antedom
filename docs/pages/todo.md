@@ -57,6 +57,8 @@ Plans and ideas
   This bit me with the ellipsis project.
   Would allow running the daemon without exposing it to everything on localhost.
 
+- Syntax highlighting for code blocks
+
 </template>
 
 </template>
