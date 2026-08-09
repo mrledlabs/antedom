@@ -1,4 +1,4 @@
-module micahrl.com/antedom
+module github.com/mrled/antedom
 
 go 1.25.0
 

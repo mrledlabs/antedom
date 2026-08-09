@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"micahrl.com/antedom/testsites"
+	"github.com/mrled/antedom/testsites"
 )
 
 var benchData = map[string]any{

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"micahrl.com/antedom/testsites"
+	"github.com/mrled/antedom/testsites"
 )
 
 func writeExtension(t *testing.T, root, src string) {

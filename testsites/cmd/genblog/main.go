@@ -12,7 +12,7 @@ import (
 	"flag"
 	"log"
 
-	"micahrl.com/antedom/testsites"
+	"github.com/mrled/antedom/testsites"
 )
 
 func main() {
