@@ -2,12 +2,16 @@ package antedom
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	htmltmpl "html/template"
 	"io"
 	"os"
 	"testing"
 
 	"golang.org/x/net/html"
+
+	"micahrl.com/antedom/testsites"
 )
 
 var benchData = map[string]any{
@@ -52,6 +56,37 @@ func BenchmarkParseOnly(b *testing.B) {
 		if _, err := html.Parse(bytes.NewReader(src)); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+// Whole-site builds at increasing scale, through the same
+// Project/Operation path the CLI uses, on generated blog sites
+// (see testsites). One timed build per size:
+//
+//	go test -bench BuildBlog -benchtime 1x
+//
+// pages/s counts rendered pages (posts + index), not opaque files.
+func BenchmarkBuildBlog(b *testing.B) {
+	for _, n := range []int{10, 100, 1000} {
+		b.Run(fmt.Sprint(n), func(b *testing.B) {
+			site := b.TempDir()
+			if err := testsites.Blog(site, n); err != nil {
+				b.Fatal(err)
+			}
+			op := NewProject(site).Operation(context.Background(), OperationBuild)
+			b.ReportAllocs()
+			b.ResetTimer()
+			pages := 0
+			for b.Loop() {
+				built, err := op.Build(b.TempDir())
+				if err != nil {
+					b.Fatal(err)
+				}
+				pages += built
+			}
+			b.ReportMetric(float64(pages)/b.Elapsed().Seconds(), "pages/s")
+			b.ReportMetric(b.Elapsed().Seconds(), "wall-s")
+		})
 	}
 }
 
