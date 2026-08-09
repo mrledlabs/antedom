@@ -6,8 +6,43 @@
 }
 </script>
 
-Status: implemented
-(`parseMarkdown` in `markdown.go`; `.md` handling in `site.go`).
+"Syntactic sugar causes cancer of the semicolon."
+
+And yet.
+
+A simple Markdown content page looks like this:
+
+```markdown
+<script ante:meta type="application/json">
+{
+  "title": "Test",
+  "layout": "base.html"
+}
+</script>
+
+Here is some Markdown content.
+```
+
+That is syntactic sugar for the more explicit:
+
+```markdown
+<template ante:layout="base.html">
+
+<script ante:meta type="application/json">
+{
+  "title": "Test"
+}
+</script>
+
+<template ante:fill>
+
+Here is some Markdown content.
+
+</template>
+
+</template>
+
+```
 
 ## Model
 
