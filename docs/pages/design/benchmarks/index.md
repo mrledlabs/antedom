@@ -25,6 +25,27 @@ Some notes:
 - `-bench` specifies which benchmarks to run, and `BenchmarkBuildBlog` is unanchored,
   so it finds `BenchmarkBuildBlogExtension` and any others with that substring in it as well.
 
+## What gets recorded
+
+Whole-site builds run at two sizes. **1000 pages** — a medium-large
+personal site — is the standard tier: every recorded configuration runs
+there, and ten samples resolve per-page regressions of a few percent.
+**10000 pages** runs only where scale itself is the question:
+whole-build scaling (`BuildBlog`), extension outputs that accumulate
+per-page state (`rss-feed`), and allocation-heavy per-page work
+(highlighting with several code blocks per post). Per-page cost is flat
+across sizes, so smaller tiers measured nothing 1000 doesn't, and
+whole builds much under a second were dominated by process noise
+(40–120% variation between samples); 10- and 100-page tiers were
+recorded once and removed.
+
+Benchmarks named `BenchmarkDiag` answer one-off design questions — for
+example, pricing the `antedom.xml` tagged template against raw string
+concatenation, or an expression-compilation-heavy page against a
+cache-friendly one. They stay runnable
+(`go test -run '^$' -bench Diag -benchtime 1x`), but the recording
+command's `BenchmarkBuildBlog` pattern deliberately leaves them out.
+
 ## Recordings
 
 Newest first. Each heading links to the raw
