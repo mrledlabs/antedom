@@ -64,6 +64,84 @@ func TestOperationNewPage(t *testing.T) {
 	}
 }
 
+// artifactExtension registers a page:document hook plus two artifacts, so
+// artifact parity between build paths also proves the hook ran: highlighting
+// changes rendered page sizes, and sitemap.xml records them.
+const artifactExtension = `
+antedom.apiVersion(1);
+antedom.on("page:document", (page) => {
+  page.document.highlight({style: "github"});
+});
+antedom.output("sitemap", {
+  file: "sitemap.xml",
+  begin(_, output) { output.write("<urlset>\n"); },
+  page(page, output) { output.write('<url path="' + page.urlPath + '" bytes="' + page.size + '"/>\n'); },
+  end(_, output) { output.write("</urlset>\n"); },
+});
+antedom.output("manifest", antedom.go.jsonManifest({file: "manifest.json"}));
+`
+
+func TestOperationBuildArtifacts(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, artifactExtension)
+
+	full := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(full); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	built, err := NewProject(root).Operation(context.Background(), OperationServe).buildArtifacts(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !built {
+		t.Fatal("buildArtifacts reported nothing built")
+	}
+
+	for _, artifact := range []string{"sitemap.xml", "manifest.json"} {
+		fromBuild, err := os.ReadFile(filepath.Join(full, artifact))
+		if err != nil {
+			t.Fatal(err)
+		}
+		fromArtifacts, err := os.ReadFile(filepath.Join(dir, artifact))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(fromBuild) != string(fromArtifacts) {
+			t.Errorf("%s differs from full build:\nbuild: %s\nartifacts: %s", artifact, fromBuild, fromArtifacts)
+		}
+	}
+	for _, page := range []string{"index.html", "plain.txt"} {
+		if _, err := os.Stat(filepath.Join(dir, page)); !os.IsNotExist(err) {
+			t.Errorf("artifact build wrote site file %s: %v", page, err)
+		}
+	}
+}
+
+func TestOperationBuildArtifactsWithoutOutputs(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+
+	// No antedom.js at all.
+	if built, err := NewProject(root).Operation(context.Background(), OperationServe).buildArtifacts(t.TempDir()); err != nil || built {
+		t.Errorf("no extension: buildArtifacts = (%v, %v), want (false, nil)", built, err)
+	}
+
+	// An extension registering no outputs.
+	writeExtension(t, root, `antedom.apiVersion(1);`)
+	if built, err := NewProject(root).Operation(context.Background(), OperationServe).buildArtifacts(t.TempDir()); err != nil || built {
+		t.Errorf("no outputs: buildArtifacts = (%v, %v), want (false, nil)", built, err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := NewProject(root).Operation(ctx, OperationServe).buildArtifacts(t.TempDir()); !errors.Is(err, context.Canceled) {
+		t.Errorf("canceled artifact build error = %v, want context.Canceled", err)
+	}
+}
+
 func TestOperationBoundaries(t *testing.T) {
 	project := NewProject(t.TempDir())
 	if _, err := NewOperation(context.Background(), OperationNew, project).Build(t.TempDir()); err == nil {

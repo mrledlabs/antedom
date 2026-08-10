@@ -102,6 +102,45 @@ func (o *Operation) Build(out string) (int, error) {
 	return site.BuildWithOptions(o.operationContext(), plan, output, options)
 }
 
+// buildArtifacts renders the project's registered extension outputs into
+// dir without writing the HTML tree. The pipeline otherwise matches Build —
+// outputs observe hook-transformed rendered pages — so the artifacts are
+// byte-identical to a full build's. It reports false without building when
+// the project registers no outputs. It is not gated on operation kind:
+// serve rebuilds artifacts on demand.
+func (o *Operation) buildArtifacts(dir string) (bool, error) {
+	if o == nil || o.Project == nil {
+		return false, fmt.Errorf("artifact build: no project")
+	}
+	ctx := o.operationContext()
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	extension, err := loadProjectExtension(o.Project.Root)
+	if err != nil {
+		return false, err
+	}
+	if extension == nil {
+		return false, nil
+	}
+	outputs := extension.buildOutputs(dir)
+	if len(outputs) == 0 {
+		return false, nil
+	}
+	site := o.Project.Site()
+	plan, err := site.PlanContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	_, err = site.BuildWithOptions(ctx, plan, NewOutputGroup(outputs...), BuildOptions{
+		PageDocument: extension.pageDocument,
+	})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Handler returns the operation's project handler. It checks both the
 // operation context and each request context before doing work.
 func (o *Operation) Handler() http.Handler {
