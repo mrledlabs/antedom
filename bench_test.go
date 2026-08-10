@@ -94,7 +94,10 @@ func BenchmarkBuildBlog(b *testing.B) {
 // Extension overhead through the same generated-site build. "minimal" loads
 // the runtime but registers nothing; "noop-hook" also crosses the complete
 // read-only page boundary once per page; "manifest" writes HTML plus a
-// streaming JSON page manifest.
+// streaming JSON page manifest. "rss-feed" is the accumulating shape from
+// the docs site's feed: it materializes page.html for every page, holds
+// all entries in memory, and emits one buffered document at end — O(site)
+// memory and Go→JS string traffic the streaming sitemap configs never pay.
 //
 //	go test -run '^$' -bench 'BuildBlogExtension' -benchtime=1x -benchmem
 func BenchmarkBuildBlogExtension(b *testing.B) {
@@ -132,6 +135,26 @@ antedom.output("manifest", {
 			"    output.write(antedom.xml`<url><loc>${location}</loc></url>\\n`);\n" +
 			"  },\n" +
 			"  end(_, output) { output.write(antedom.xml`</urlset>\\n`); },\n" +
+			"});",
+		"rss-feed": "antedom.apiVersion(1);\n" +
+			"const siteURL = \"https://example.com/docs\";\n" +
+			"const entries = [];\n" +
+			"antedom.output(\"rss\", {\n" +
+			"  file: \"feed.xml\", validate: \"xml\",\n" +
+			"  page(page) {\n" +
+			"    if (!page.meta.date) return;\n" +
+			"    entries.push({\n" +
+			"      title: page.meta.title,\n" +
+			"      date: page.meta.date,\n" +
+			"      url: antedom.url.resolve(siteURL, page.urlPath),\n" +
+			"      html: page.html,\n" +
+			"    });\n" +
+			"  },\n" +
+			"  end(_, output) {\n" +
+			"    entries.sort((a, b) => b.date.localeCompare(a.date));\n" +
+			"    const items = entries.map(e => antedom.xml`    <item><title>${e.title}</title><link>${e.url}</link><guid isPermaLink=\"true\">${e.url}</guid><pubDate>${e.date}</pubDate><description>${e.html}</description></item>\\n`);\n" +
+			"    output.write(antedom.xml`<rss version=\"2.0\"><channel><title>Bench Blog</title><link>${siteURL}</link>\\n${antedom.xml.join(items)}</channel></rss>\\n`);\n" +
+			"  },\n" +
 			"});",
 		"raw-xml-sitemap": `antedom.apiVersion(1);
 const siteURL = "https://example.com/docs";
