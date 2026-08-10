@@ -201,6 +201,15 @@ func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
 	return sobek.Undefined()
 }
 
+// outputFiles returns each registered output's slash-separated file path.
+func (e *projectExtension) outputFiles() []string {
+	files := make([]string, len(e.outputs))
+	for i, output := range e.outputs {
+		files[i] = output.file
+	}
+	return files
+}
+
 func (e *projectExtension) buildOutputs(root string) []Output {
 	outputs := make([]Output, 0, len(e.outputs))
 	claimed := make(map[string]string)

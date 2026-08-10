@@ -100,6 +100,19 @@ antedom never ships project extensions.
   cannot span pages in serve the way it can within a single build, because
   each request is a fresh runtime.
 
+- Serve also serves registered build outputs at their file paths, with a
+  freshness model that differs from pages by necessity. A page render
+  needs only that page, so pages always render fresh per request; an
+  artifact like sitemap.xml needs every page, so serve rebuilds artifacts
+  on demand into a temporary cache directory and reuses them until the
+  site fingerprint (pages, layout, data, antedom.js) changes. A served
+  artifact is therefore a snapshot of the site as of its last rebuild —
+  `data.now`, for example, is frozen in a cached artifact while live in
+  pages — and a test asserts served artifacts are byte-identical to a
+  full build's. One rebuild runs at a time; concurrent artifact requests
+  wait for it and share its result. A custom `Project.Data` source is
+  invisible to the fingerprint.
+
 - Builds always write the normal HTML tree and may fan each ephemeral
   `RenderedPage` out synchronously to additional outputs. JavaScript outputs
   now receive streaming `begin`, `page`, `asset`, and `end` callbacks plus a

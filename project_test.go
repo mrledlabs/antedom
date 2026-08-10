@@ -3,6 +3,8 @@ package antedom
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,6 +141,75 @@ func TestOperationBuildArtifactsWithoutOutputs(t *testing.T) {
 	cancel()
 	if _, err := NewProject(root).Operation(ctx, OperationServe).buildArtifacts(t.TempDir()); !errors.Is(err, context.Canceled) {
 		t.Errorf("canceled artifact build error = %v, want context.Canceled", err)
+	}
+}
+
+func TestServeArtifacts(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, artifactExtension)
+
+	full := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(full); err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewProject(root).Operation(context.Background(), OperationServe).Handler()
+	get := func(path string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		return rec
+	}
+
+	for _, artifact := range []string{"sitemap.xml", "manifest.json"} {
+		rec := get("/" + artifact)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET /%s = %d: %s", artifact, rec.Code, rec.Body)
+		}
+		want, err := os.ReadFile(filepath.Join(full, artifact))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rec.Body.String() != string(want) {
+			t.Errorf("served /%s differs from build:\nbuild: %s\nserve: %s", artifact, want, rec.Body)
+		}
+	}
+
+	// Artifact routing leaves pages and misses alone.
+	if rec := get("/"); rec.Code != http.StatusOK {
+		t.Errorf("GET / = %d", rec.Code)
+	}
+	if rec := get("/absent.xml"); rec.Code != http.StatusNotFound {
+		t.Errorf("GET /absent.xml = %d, want 404", rec.Code)
+	}
+
+	// A site edit invalidates the cached artifacts.
+	extra := `<script ante:meta type="application/json">
+{"title":"Extra", "layout":"base.html"}
+</script>
+
+more
+`
+	if err := os.WriteFile(filepath.Join(root, "pages", "extra.md"), []byte(extra), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rec := get("/sitemap.xml")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /sitemap.xml after edit = %d: %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(rec.Body.String(), `path="/extra/"`) {
+		t.Errorf("sitemap not rebuilt after page added:\n%s", rec.Body)
+	}
+}
+
+func TestServeArtifactsWithoutExtension(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	h := NewProject(root).Operation(context.Background(), OperationServe).Handler()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/sitemap.xml", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("GET /sitemap.xml = %d, want 404", rec.Code)
 	}
 }
 

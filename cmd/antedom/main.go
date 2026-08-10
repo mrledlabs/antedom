@@ -51,7 +51,10 @@ func main() {
 		Use:   "serve",
 		Short: "Serve the site over HTTP, rendering per request",
 		Long: "Serve the site over HTTP, rendering each page per request.\n" +
-			"Intended for production serving as well as development.",
+			"Intended for production serving as well as development.\n" +
+			"Pages always render fresh; extension build outputs (sitemap.xml\n" +
+			"and the like) are rebuilt on demand and cached until site files\n" +
+			"change, so a served output is a snapshot of its last rebuild.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			op := antedom.NewProject(siteDir).Operation(cmd.Context(), antedom.OperationServe)

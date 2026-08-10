@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -152,6 +154,7 @@ func (o *Operation) Handler() http.Handler {
 	next := o.Project.Site().HandlerWithOptions(HandlerOptions{
 		PageDocument: o.servePageDocument,
 	})
+	artifacts := &artifactCache{op: o}
 	ctx := o.operationContext()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
@@ -162,9 +165,102 @@ func (o *Operation) Handler() http.Handler {
 			http.Error(w, r.Context().Err().Error(), http.StatusRequestTimeout)
 			return
 		default:
+			if rel, ok := artifacts.match(r); ok {
+				artifacts.serve(w, r, rel)
+				return
+			}
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+// artifactCache serves registered extension outputs in serve mode. Pages
+// render fresh per request, but an artifact such as a sitemap needs the whole
+// site, so artifacts are rebuilt on demand into a temporary directory and
+// reused until the site fingerprint changes: a served artifact is a snapshot
+// of the site as of its last rebuild (data values like now are frozen there
+// while live in pages). One rebuild runs at a time; concurrent artifact
+// requests wait for it and reuse its result.
+type artifactCache struct {
+	op *Operation
+
+	mu    sync.Mutex
+	dir   string
+	fp    uint64
+	valid bool
+}
+
+// match reports the registered output file the request addresses, if any,
+// consulting the extension afresh like the rest of the request pipeline.
+// Extension load errors defer to the page handler, which surfaces them on
+// rendered requests, so non-artifact traffic is unaffected by a broken
+// extension.
+func (c *artifactCache) match(r *http.Request) (string, bool) {
+	extension, err := loadProjectExtension(c.op.Project.Root)
+	if err != nil || extension == nil {
+		return "", false
+	}
+	rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+	if slices.Contains(extension.outputFiles(), rel) {
+		return rel, true
+	}
+	return "", false
+}
+
+func (c *artifactCache) serve(w http.ResponseWriter, r *http.Request, rel string) {
+	file, err := c.refresh(rel)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	f, err := os.Open(file)
+	if os.IsNotExist(err) {
+		// The output was unregistered between match and rebuild.
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.ServeContent(w, r, path.Base(rel), info.ModTime(), f)
+}
+
+// refresh rebuilds the cached artifacts if the site changed since the last
+// build and returns rel's on-disk path. The fingerprint is taken before
+// building so edits landing mid-build invalidate the result instead of going
+// unseen. It covers the conventional project inputs; a custom Project.Data
+// source is invisible to it.
+func (c *artifactCache) refresh(rel string) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.dir == "" {
+		dir, err := os.MkdirTemp("", "antedom-artifacts-")
+		if err != nil {
+			return "", err
+		}
+		c.dir = dir
+	}
+	root := c.op.Project.Root
+	fp := fingerprint(
+		filepath.Join(root, "pages"),
+		filepath.Join(root, "layout"),
+		filepath.Join(root, "data"),
+		filepath.Join(root, "antedom.js"),
+	)
+	if !c.valid || fp != c.fp {
+		if _, err := c.op.buildArtifacts(c.dir); err != nil {
+			return "", err
+		}
+		c.fp, c.valid = fp, true
+	}
+	return filepath.Join(c.dir, filepath.FromSlash(rel)), nil
 }
 
 // servePageDocument loads the project extension for one request's render.
