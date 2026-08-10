@@ -79,6 +79,19 @@ const blogPost = `<script ante:meta type="application/json">
 type BlogOptions struct {
 	CodeBlocks int
 	Extension  string
+
+	// Expression-density knobs; at zero, posts are plain markdown.
+	// Directives appends that many ante:text spans per post — with
+	// UniqueExprs each span gets distinct expression source text,
+	// otherwise all spans repeat one expression (each page renders in
+	// a fresh Engine, so this is the difference between compiling the
+	// expression once per page and once per span). LoopItems adds an
+	// ante:for over that many generated items; ScopeStatements adds
+	// an ante:scope script of that many string-building statements.
+	Directives      int
+	UniqueExprs     bool
+	LoopItems       int
+	ScopeStatements int
 }
 
 // Blog writes a blog-shaped project to dir: an index page listing
@@ -119,12 +132,56 @@ func BlogWithOptions(dir string, n int, options BlogOptions) error {
 		if blocks := blogCodeBlocks(options.CodeBlocks); blocks != "" {
 			post += "\n" + blocks
 		}
+		if exprs := blogExpressions(options); exprs != "" {
+			post += "\n" + exprs
+		}
 		name := fmt.Sprintf("post-%04d.md", i+1)
 		if err := os.WriteFile(filepath.Join(dir, "pages", "posts", name), []byte(post), 0o666); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// blogExpressions renders a post's expression-heavy tail. The scope
+// script comes first: its declarations are visible only to following
+// siblings. The directive markup is contiguous HTML with no blank
+// lines, so goldmark passes the whole block through without
+// re-entering markdown parsing.
+func blogExpressions(o BlogOptions) string {
+	if o.Directives == 0 && o.LoopItems == 0 && o.ScopeStatements == 0 {
+		return ""
+	}
+	var out strings.Builder
+	if o.ScopeStatements > 0 || o.LoopItems > 0 {
+		out.WriteString("<script ante:scope>\n")
+		if o.ScopeStatements > 0 {
+			out.WriteString("  let v0 = page.title;\n")
+			for i := 1; i < o.ScopeStatements; i++ {
+				fmt.Fprintf(&out, "  let v%d = v%d + %q;\n", i, i-1, " "+sentences[i%len(sentences)])
+			}
+			fmt.Fprintf(&out, "  const heavy = v%d.split(\" \").length;\n", o.ScopeStatements-1)
+		}
+		if o.LoopItems > 0 {
+			fmt.Fprintf(&out, "  const items = Array.from({length: %d}, (_, i) => ({n: i, label: `item ${i}`}));\n", o.LoopItems)
+		}
+		out.WriteString("</script>\n\n")
+	}
+	if o.Directives > 0 || o.LoopItems > 0 {
+		out.WriteString("<div class=\"expressions\">\n")
+		for i := range o.Directives {
+			if o.UniqueExprs {
+				fmt.Fprintf(&out, "<span ante:text=\"`${page.title} · %d`\">d</span>\n", i)
+			} else {
+				out.WriteString("<span ante:text=\"`${page.title} · directive`\">d</span>\n")
+			}
+		}
+		if o.LoopItems > 0 {
+			out.WriteString("<ul>\n<li ante:for=\"item of items\"><a ante:href=\"'/items/' + item.n\" ante:text=\"item.label\">item</a></li>\n</ul>\n")
+		}
+		out.WriteString("</div>\n")
+	}
+	return out.String()
 }
 
 func blogCodeBlocks(count int) string {

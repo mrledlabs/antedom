@@ -207,6 +207,56 @@ antedom.output("sitemap", {
 	}
 }
 
+// Expression-heavy pages through the same generated-site build. Each page
+// renders in a fresh Engine (site.go: template JS can leak globals), so
+// directive expressions compile per page and the compiled-expression cache
+// dedupes only within a page: "directives" repeats one expression across
+// every span (compile once per page, evaluate per span) while
+// "unique-exprs" gives each span distinct source text, defeating the cache
+// to expose compilation cost. "loop" stresses subtree cloning plus a child
+// scope per iteration, "scope" an ante:scope script's parse and eval, and
+// "combined" all three, roughly the shape of a data-driven docs page.
+//
+//	go test -run '^$' -bench 'BuildBlogExpressions' -benchtime=1x -benchmem
+func BenchmarkBuildBlogExpressions(b *testing.B) {
+	configs := []struct {
+		name    string
+		options testsites.BlogOptions
+	}{
+		{"baseline", testsites.BlogOptions{}},
+		{"directives", testsites.BlogOptions{Directives: 20}},
+		{"unique-exprs", testsites.BlogOptions{Directives: 20, UniqueExprs: true}},
+		{"loop", testsites.BlogOptions{LoopItems: 50}},
+		{"scope", testsites.BlogOptions{ScopeStatements: 40}},
+		{"combined", testsites.BlogOptions{Directives: 20, LoopItems: 50, ScopeStatements: 40}},
+	}
+	for _, n := range []int{100, 1000, 10000} {
+		for _, config := range configs {
+			b.Run(fmt.Sprintf("%d/%s", n, config.name), func(b *testing.B) {
+				site := b.TempDir()
+				if err := testsites.BlogWithOptions(site, n, config.options); err != nil {
+					b.Fatal(err)
+				}
+				op := NewProject(site).Operation(context.Background(), OperationBuild)
+				b.ReportAllocs()
+				b.ResetTimer()
+				pages := 0
+				for b.Loop() {
+					built, err := op.Build(b.TempDir())
+					if err != nil {
+						b.Fatal(err)
+					}
+					pages += built
+				}
+				elapsed := b.Elapsed()
+				b.ReportMetric(float64(pages)/elapsed.Seconds(), "pages/s")
+				b.ReportMetric(float64(elapsed.Microseconds())/float64(pages), "us/page")
+				b.ReportMetric(elapsed.Seconds(), "wall-s")
+			})
+		}
+	}
+}
+
 // Go-backed highlighting with zero, one, and several fenced code blocks per
 // post. This separates hook/traversal overhead from work that should scale with
 // the number and size of code blocks.

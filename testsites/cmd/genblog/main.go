@@ -18,11 +18,21 @@ import (
 func main() {
 	n := flag.Int("n", 1000, "number of posts")
 	out := flag.String("o", "", "project directory to write (required)")
+	directives := flag.Int("directives", 0, "ante:text spans per post")
+	unique := flag.Bool("unique-exprs", false, "distinct expression source per span")
+	loopItems := flag.Int("loop-items", 0, "ante:for items per post")
+	scopeStatements := flag.Int("scope-statements", 0, "ante:scope statements per post")
 	flag.Parse()
 	if *out == "" {
 		log.Fatal("-o is required")
 	}
-	if err := testsites.Blog(*out, *n); err != nil {
+	options := testsites.BlogOptions{
+		Directives:      *directives,
+		UniqueExprs:     *unique,
+		LoopItems:       *loopItems,
+		ScopeStatements: *scopeStatements,
+	}
+	if err := testsites.BlogWithOptions(*out, *n, options); err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("wrote a %d-post blog to %s", *n, *out)
