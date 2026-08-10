@@ -103,6 +103,11 @@ func BenchmarkBuildBlogExtension(b *testing.B) {
 		"noop-hook": `antedom.apiVersion(1); antedom.on("page:document", () => {});`,
 		"manifest": `antedom.apiVersion(1);
 antedom.output("manifest", antedom.go.jsonManifest({file: "pages.json"}));`,
+		"generated-output": `antedom.apiVersion(1);
+antedom.output("sitemap", {
+  file: "sitemap.txt",
+  page(page, output) { output.write(page.urlPath + "\n"); },
+});`,
 	}
 	for _, n := range []int{100, 1000, 10000} {
 		for name, config := range configs {

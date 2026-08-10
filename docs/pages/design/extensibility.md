@@ -99,10 +99,11 @@ antedom never ships project extensions.
   each request is a fresh runtime.
 
 - Builds always write the normal HTML tree and may fan each ephemeral
-  `RenderedPage` out synchronously to additional outputs. The first configured
-  output is a streaming JSON manifest: it records each page's path, output
-  path, source format, rendered byte size, and metadata, then atomically
-  publishes the array on commit without retaining page DOMs or bodies.
+  `RenderedPage` out synchronously to additional outputs. JavaScript outputs
+  now receive streaming `begin`, `page`, `asset`, and `end` callbacks plus a
+  Go-backed artifact writer. They can produce arbitrary text, JSON, or byte
+  files without retaining page DOMs or bodies. The original streaming JSON
+  manifest remains as the `antedom.go.jsonManifest()` convenience output.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `new`. There is
@@ -111,23 +112,11 @@ graph yet.
 
 ## Outstanding MVP work
 
-### Repeated highlighting
-
-Repeated `page.document.highlight()` calls are currently allowed but their
-semantics are not yet locked down. A highlighted `<code>` retains its
-`language-*` class, so a second call matches it again, extracts the text from
-the generated spans, tokenizes it again, and reports it in the returned count.
-This should usually produce equivalent HTML, but it repeats work and makes the
-meaning of the count surprising when two hooks independently enable
-highlighting.
-
-Before treating the API as stable, make highlighting idempotent within one
-document handle: track highlighted code nodes in Go, skip them on later calls,
-and define the return value as the number of newly highlighted blocks. A
-second identical call should return zero and leave serialized output unchanged.
-Tests should cover one hook calling twice, two hooks calling once each, and a
-second call with different options. The last case needs an explicit rule;
-the simplest MVP rule is that the first successful highlighting wins.
+Measure the generalized JavaScript output callback at 10,000 pages and add a
+real sitemap or search-index configuration to the documentation site. Page
+text extraction is intentionally basic concatenated rendered text for now; a
+search implementation may reveal that it needs configurable exclusion of
+navigation, scripts, styles, or other layout content.
 
 ## Project configuration
 
@@ -564,8 +553,40 @@ in the implementation status.
 
 The HTML output remains enabled by default. `OutputGroup` sends each ephemeral
 `RenderedPage` synchronously to HTML and configured outputs before releasing
-it. The JSON manifest proves that aggregate formats fit the output contract
-without holding all rendered pages in memory:
+it. A general JavaScript output can stream one or several artifacts:
+
+```js
+antedom.output("sitemap", {
+  file: "sitemap.xml",
+
+  begin(build, output) {
+    output.write('<?xml version="1.0"?>\n<urlset>\n');
+  },
+
+  page(page, output) {
+    output.write(`<url><loc>${page.urlPath}</loc></url>\n`);
+  },
+
+  end(build, output) {
+    output.write("</urlset>\n");
+    output.open("robots.txt").write("User-agent: *\n");
+  },
+});
+```
+
+The configuration has one required default `file` and optional `begin`,
+`page`, `asset`, and `end` functions. `begin` and `end` receive a read-only
+build summary containing page and asset counts. `page` receives read-only
+paths, URL, source format, rendered byte size, metadata, and lazily converted
+`html` and `text`; it never receives the DOM. `asset` receives read-only paths.
+The writer provides `write(string | Uint8Array)`, `writeJSON(value)`, and
+`open(relativePath)`. A child writer returned by `open` writes that artifact
+but cannot open further files.
+
+Paths are confined to the output directory and cannot collide with planned
+pages, assets, or another registered output. Every artifact streams to a
+temporary file and is renamed only on commit. The JSON manifest convenience
+avoids a JavaScript callback per page:
 
 ```js
 antedom.output("manifest", antedom.go.jsonManifest({
@@ -573,8 +594,14 @@ antedom.output("manifest", antedom.go.jsonManifest({
 }));
 ```
 
-The manifest itself is transactional: it streams to a temporary file and
-renames it only on commit. `OutputGroup` begins children in registration order,
+A one-run 10,001-page benchmark on Linux/arm64 measured the minimal extension
+at 1.459 s (6,856 pages/s) and a generated output that performs one JavaScript
+callback and one small write per page at 1.608 s (6,221 pages/s): about 10.2%
+wall-time overhead and 14.9 microseconds per page in this environment. This is
+a useful first bound, not a stable historical result; the checked-in benchmark
+should be repeated alongside future output changes.
+
+`OutputGroup` begins children in registration order,
 forwards pages and assets in that order, and aborts begun children in reverse
 order after a failure. This is coordinated best-effort cleanup, not an atomic
 transaction across unrelated destinations: the current HTML output writes

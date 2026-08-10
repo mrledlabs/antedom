@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // OutputGroup sends one build synchronously to several outputs. Pages remain
@@ -220,4 +221,112 @@ func (o *JSONManifestOutput) Abort(context.Context) error {
 		removeErr = nil
 	}
 	return errors.Join(closeErr, removeErr)
+}
+
+// ArtifactWriter incrementally writes one or more generated files beneath an
+// output directory. Files are private temporary files until Commit.
+type ArtifactWriter struct {
+	Dir     string
+	claimed map[string]string
+	owner   string
+	files   map[string]*artifactFile
+	done    bool
+}
+
+type artifactFile struct {
+	path     string
+	tempPath string
+	file     *os.File
+}
+
+func newArtifactWriter(dir, owner string, claimed map[string]string) *ArtifactWriter {
+	return &ArtifactWriter{Dir: dir, owner: owner, claimed: claimed, files: make(map[string]*artifactFile)}
+}
+
+func cleanArtifactPath(name string) (string, error) {
+	name = filepath.ToSlash(filepath.Clean(name))
+	if filepath.IsAbs(name) || name == "." || name == ".." || strings.HasPrefix(name, "../") {
+		return "", fmt.Errorf("artifact path must stay within the output directory")
+	}
+	return name, nil
+}
+
+func (w *ArtifactWriter) Open(name string) error {
+	if w.done {
+		return fmt.Errorf("artifact writer is no longer active")
+	}
+	name, err := cleanArtifactPath(name)
+	if err != nil {
+		return err
+	}
+	if _, ok := w.files[name]; ok {
+		return nil
+	}
+	if previous, ok := w.claimed[name]; ok && previous != w.owner {
+		return fmt.Errorf("artifact %q conflicts with %s", name, previous)
+	}
+	w.claimed[name] = w.owner
+	final := filepath.Join(w.Dir, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(final), 0o755); err != nil {
+		return err
+	}
+	temp, err := os.CreateTemp(filepath.Dir(final), "."+filepath.Base(final)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	w.files[name] = &artifactFile{path: final, tempPath: temp.Name(), file: temp}
+	return nil
+}
+
+func (w *ArtifactWriter) Write(name string, data []byte) error {
+	if err := w.Open(name); err != nil {
+		return err
+	}
+	_, err := w.files[name].file.Write(data)
+	return err
+}
+
+func (w *ArtifactWriter) Commit(ctx context.Context) error {
+	if w.done {
+		return fmt.Errorf("artifact writer is no longer active")
+	}
+	for _, artifact := range w.files {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := artifact.file.Sync(); err != nil {
+			return err
+		}
+		if err := artifact.file.Close(); err != nil {
+			return err
+		}
+		artifact.file = nil
+	}
+	for _, artifact := range w.files {
+		if err := os.Rename(artifact.tempPath, artifact.path); err != nil {
+			return err
+		}
+		artifact.tempPath = ""
+	}
+	w.done = true
+	return nil
+}
+
+func (w *ArtifactWriter) Abort(context.Context) error {
+	if w.done {
+		return nil
+	}
+	var errs []error
+	for _, artifact := range w.files {
+		if artifact.file != nil {
+			errs = append(errs, artifact.file.Close())
+		}
+		if artifact.tempPath != "" {
+			if err := os.Remove(artifact.tempPath); err != nil && !os.IsNotExist(err) {
+				errs = append(errs, err)
+			}
+		}
+	}
+	w.done = true
+	return errors.Join(errs...)
 }

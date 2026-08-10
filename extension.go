@@ -25,8 +25,16 @@ type projectExtension struct {
 }
 
 type extensionOutput struct {
-	name string
-	file string
+	name      string
+	file      string
+	callbacks *extensionOutputCallbacks
+}
+
+type extensionOutputCallbacks struct {
+	begin sobek.Callable
+	page  sobek.Callable
+	asset sobek.Callable
+	end   sobek.Callable
 }
 
 // loadProjectExtension loads <root>/antedom.js. A missing file means no
@@ -116,27 +124,284 @@ func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
 			panic(e.vm.NewTypeError("antedom output %q is already registered", name))
 		}
 	}
-	token, ok := call.Argument(1).Export().(*outputToken)
-	if !ok {
-		panic(e.vm.NewTypeError("antedom.output %q requires an antedom.go output", name))
+	arg := call.Argument(1)
+	token, tokenOK := arg.Export().(*outputToken)
+	var registered extensionOutput
+	if tokenOK {
+		registered = extensionOutput{name: name, file: token.file}
+	} else {
+		obj, ok := arg.(*sobek.Object)
+		if !ok || sobek.IsNull(arg) {
+			panic(e.vm.NewTypeError("antedom.output %q requires an output configuration or antedom.go output", name))
+		}
+		for _, key := range obj.Keys() {
+			switch key {
+			case "file", "begin", "page", "asset", "end":
+			default:
+				panic(e.vm.NewTypeError("unknown antedom.output option %q", key))
+			}
+		}
+		fileValue := obj.Get("file")
+		if fileValue == nil || sobek.IsUndefined(fileValue) {
+			panic(e.vm.NewTypeError("antedom.output %q file is required", name))
+		}
+		file, ok := fileValue.Export().(string)
+		if !ok || file == "" {
+			panic(e.vm.NewTypeError("antedom.output %q file is required", name))
+		}
+		var err error
+		if file, err = cleanArtifactPath(file); err != nil {
+			panic(e.vm.NewTypeError("antedom.output %q file must stay within the output directory", name))
+		}
+		callbacks := &extensionOutputCallbacks{}
+		for key, target := range map[string]*sobek.Callable{
+			"begin": &callbacks.begin, "page": &callbacks.page,
+			"asset": &callbacks.asset, "end": &callbacks.end,
+		} {
+			value := obj.Get(key)
+			if value == nil || sobek.IsUndefined(value) {
+				continue
+			}
+			fn, ok := sobek.AssertFunction(value)
+			if !ok {
+				panic(e.vm.NewTypeError("antedom.output %q %s must be a function", name, key))
+			}
+			*target = fn
+		}
+		registered = extensionOutput{name: name, file: file, callbacks: callbacks}
 	}
 	for _, output := range e.outputs {
-		if output.file == token.file {
-			panic(e.vm.NewTypeError("antedom output file %q is already registered", token.file))
+		if output.file == registered.file {
+			panic(e.vm.NewTypeError("antedom output file %q is already registered", registered.file))
 		}
 	}
-	e.outputs = append(e.outputs, extensionOutput{name: name, file: token.file})
+	e.outputs = append(e.outputs, registered)
 	return sobek.Undefined()
 }
 
 func (e *projectExtension) buildOutputs(root string) []Output {
 	outputs := make([]Output, 0, len(e.outputs))
+	claimed := make(map[string]string)
 	for _, output := range e.outputs {
-		manifest := NewJSONManifestOutput(filepath.Join(root, filepath.FromSlash(output.file)))
-		manifest.OutputPath = output.file
-		outputs = append(outputs, manifest)
+		claimed[output.file] = fmt.Sprintf("output %q", output.name)
+	}
+	for _, output := range e.outputs {
+		if output.callbacks == nil {
+			manifest := NewJSONManifestOutput(filepath.Join(root, filepath.FromSlash(output.file)))
+			manifest.OutputPath = output.file
+			outputs = append(outputs, manifest)
+			continue
+		}
+		outputs = append(outputs, &javascriptArtifactOutput{
+			extension: e, config: output, root: root, claimed: claimed,
+		})
 	}
 	return outputs
+}
+
+// javascriptArtifactOutput adapts streaming JavaScript lifecycle callbacks to
+// the Go Output contract. It never exports a DOM into Sobek.
+type javascriptArtifactOutput struct {
+	extension *projectExtension
+	config    extensionOutput
+	root      string
+	claimed   map[string]string
+	writer    *ArtifactWriter
+	value     sobek.Value
+	planValue sobek.Value
+}
+
+func (o *javascriptArtifactOutput) Begin(ctx context.Context, plan *BuildPlan) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	owner := fmt.Sprintf("output %q", o.config.name)
+	for _, page := range plan.Pages {
+		if page.OutputPath == o.config.file {
+			return fmt.Errorf("artifact %q conflicts with page %s", o.config.file, page.RelPath)
+		}
+		if _, ok := o.claimed[page.OutputPath]; !ok {
+			o.claimed[page.OutputPath] = "page " + page.RelPath
+		}
+	}
+	for _, asset := range plan.Assets {
+		if asset.OutputPath == o.config.file {
+			return fmt.Errorf("artifact %q conflicts with asset %s", o.config.file, asset.RelPath)
+		}
+		if _, ok := o.claimed[asset.OutputPath]; !ok {
+			o.claimed[asset.OutputPath] = "asset " + asset.RelPath
+		}
+	}
+	o.writer = newArtifactWriter(o.root, owner, o.claimed)
+	if err := o.writer.Open(o.config.file); err != nil {
+		_ = o.writer.Abort(context.WithoutCancel(ctx))
+		o.writer = nil
+		return err
+	}
+	o.value = o.writerValue(o.config.file)
+	o.planValue = o.extension.readOnlyValue(map[string]any{
+		"pages": len(plan.Pages), "assets": len(plan.Assets),
+	})
+	if err := o.invoke("begin", o.config.callbacks.begin, o.planValue, o.value); err != nil {
+		_ = o.writer.Abort(context.WithoutCancel(ctx))
+		o.writer, o.value, o.planValue = nil, nil, nil
+		return err
+	}
+	return nil
+}
+
+func (o *javascriptArtifactOutput) WritePage(ctx context.Context, page *RenderedPage) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	handle := &outputPageValue{extension: o.extension, page: page}
+	value := o.extension.vm.NewDynamicObject(handle)
+	err := o.invoke("page", o.config.callbacks.page, value, o.value)
+	handle.page = nil
+	return err
+}
+
+func (o *javascriptArtifactOutput) WriteAsset(ctx context.Context, asset *Asset) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	value := o.extension.readOnlyValue(map[string]any{
+		"sourcePath": asset.SourcePath, "relPath": asset.RelPath, "outputPath": asset.OutputPath,
+	})
+	return o.invoke("asset", o.config.callbacks.asset, value, o.value)
+}
+
+func (o *javascriptArtifactOutput) Commit(ctx context.Context) error {
+	if err := o.invoke("end", o.config.callbacks.end, o.planValue, o.value); err != nil {
+		return err
+	}
+	if err := o.writer.Commit(ctx); err != nil {
+		return err
+	}
+	o.writer, o.value, o.planValue = nil, nil, nil
+	return nil
+}
+
+func (o *javascriptArtifactOutput) Abort(ctx context.Context) error {
+	if o.writer == nil {
+		return nil
+	}
+	err := o.writer.Abort(ctx)
+	o.writer, o.value, o.planValue = nil, nil, nil
+	return err
+}
+
+func (o *javascriptArtifactOutput) invoke(stage string, fn sobek.Callable, args ...sobek.Value) error {
+	if fn == nil {
+		return nil
+	}
+	if _, err := fn(sobek.Undefined(), args...); err != nil {
+		return fmt.Errorf("extension %s: output %q %s: %w", o.extension.path, o.config.name, stage, err)
+	}
+	return nil
+}
+
+type outputPageValue struct {
+	extension *projectExtension
+	page      *RenderedPage
+}
+
+func (p *outputPageValue) Get(key string) sobek.Value {
+	if p.page == nil {
+		panic(p.extension.vm.NewTypeError("output page handle has expired"))
+	}
+	switch key {
+	case "sourcePath":
+		return p.extension.vm.ToValue(p.page.Page.SourcePath)
+	case "relPath":
+		return p.extension.vm.ToValue(p.page.Page.RelPath)
+	case "urlPath":
+		return p.extension.vm.ToValue(p.page.Page.URLPath)
+	case "outputPath":
+		return p.extension.vm.ToValue(p.page.Page.OutputPath)
+	case "format":
+		return p.extension.vm.ToValue(string(p.page.Page.Format))
+	case "size":
+		return p.extension.vm.ToValue(len(p.page.HTML))
+	case "meta":
+		return p.extension.readOnlyValue(p.page.Page.Meta)
+	case "html":
+		return p.extension.vm.ToValue(string(p.page.HTML))
+	case "text":
+		return p.extension.vm.ToValue(text(p.page.Document))
+	default:
+		return nil
+	}
+}
+func (*outputPageValue) Set(string, sobek.Value) bool { return false }
+func (p *outputPageValue) Has(key string) bool {
+	for _, candidate := range p.Keys() {
+		if key == candidate {
+			return true
+		}
+	}
+	return false
+}
+func (*outputPageValue) Delete(string) bool { return false }
+func (*outputPageValue) Keys() []string {
+	return []string{"sourcePath", "relPath", "urlPath", "outputPath", "format", "size", "meta", "html", "text"}
+}
+
+func (o *javascriptArtifactOutput) writerValue(file string) sobek.Value {
+	write := func(call sobek.FunctionCall) sobek.Value {
+		if o.writer == nil {
+			panic(o.extension.vm.NewTypeError("artifact writer has expired"))
+		}
+		var data []byte
+		switch exported := call.Argument(0).Export().(type) {
+		case string:
+			data = []byte(exported)
+		case []byte:
+			data = exported
+		case sobek.ArrayBuffer:
+			data = exported.Bytes()
+		default:
+			panic(o.extension.vm.NewTypeError("output.write requires a string or Uint8Array"))
+		}
+		if err := o.writer.Write(file, data); err != nil {
+			panic(o.extension.vm.NewGoError(err))
+		}
+		return sobek.Undefined()
+	}
+	writeJSON := func(call sobek.FunctionCall) sobek.Value {
+		jsonObject := o.extension.vm.Get("JSON").ToObject(o.extension.vm)
+		stringify, _ := sobek.AssertFunction(jsonObject.Get("stringify"))
+		encoded, err := stringify(jsonObject, call.Argument(0))
+		if err != nil {
+			panic(err)
+		}
+		if sobek.IsUndefined(encoded) {
+			panic(o.extension.vm.NewTypeError("output.writeJSON value is not JSON serializable"))
+		}
+		if err := o.writer.Write(file, []byte(encoded.String())); err != nil {
+			panic(o.extension.vm.NewGoError(err))
+		}
+		return sobek.Undefined()
+	}
+	open := func(call sobek.FunctionCall) sobek.Value {
+		name, ok := call.Argument(0).Export().(string)
+		if !ok || name == "" {
+			panic(o.extension.vm.NewTypeError("output.open path is required"))
+		}
+		clean, err := cleanArtifactPath(name)
+		if err != nil {
+			panic(o.extension.vm.NewTypeError("output.open path must stay within the output directory"))
+		}
+		if err := o.writer.Open(clean); err != nil {
+			panic(o.extension.vm.NewGoError(err))
+		}
+		return o.writerValue(clean)
+	}
+	values := map[string]any{"write": write, "writeJSON": writeJSON}
+	if file == o.config.file {
+		values["open"] = open
+	}
+	return o.extension.readOnlyValue(values)
 }
 
 type outputToken struct{ file string }

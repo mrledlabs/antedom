@@ -78,7 +78,15 @@ func TestLoadProjectExtension(t *testing.T) {
 		},
 		"invalid output": {
 			src:  `antedom.apiVersion(1); antedom.output("manifest", {});`,
-			want: "requires an antedom.go output",
+			want: "file is required",
+		},
+		"output callback is not function": {
+			src:  `antedom.apiVersion(1); antedom.output("custom", {file: "custom.txt", page: 42});`,
+			want: "page must be a function",
+		},
+		"output escapes directory": {
+			src:  `antedom.apiVersion(1); antedom.output("custom", {file: "../custom.txt"});`,
+			want: "must stay within the output directory",
 		},
 		"duplicate output name": {
 			src: `antedom.apiVersion(1);
@@ -157,6 +165,112 @@ antedom.output("manifest", antedom.go.jsonManifest({file: "data/pages.json"}));
 	}
 	if records[0].Path != "/" || records[0].OutputPath != "index.html" || records[0].Size == 0 {
 		t.Fatalf("first manifest record = %#v", records[0])
+	}
+}
+
+func TestProjectExtensionGeneratedArtifacts(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+const search = [];
+antedom.output("site-files", {
+  file: "sitemap.xml",
+  begin(build, output) {
+    if (build.pages !== 1 || build.assets !== 1) throw new Error("bad build summary");
+    output.write("<urlset>\n");
+  },
+  page(page, output) {
+    "use strict";
+    if ("document" in page) throw new Error("DOM leaked into output page");
+    if (!page.html.includes("package main") || !page.text.includes("package main")) {
+      throw new Error("rendered content missing");
+    }
+    try { page.meta.title = "changed"; } catch (_) {}
+    if (page.meta.title !== "Code") throw new Error("metadata was mutable");
+    output.write('<url path="' + page.urlPath + '" bytes="' + page.size + '"/>\n');
+    search.push({url: page.urlPath, title: page.meta.title, text: page.text});
+  },
+  asset(asset) {
+    if (asset.relPath !== "plain.txt") throw new Error("bad asset");
+  },
+  end(build, output) {
+    output.write("</urlset>\n");
+    output.open("search/index.json").writeJSON(search);
+    output.open("_redirects").write(new Uint8Array([47, 111, 108, 100, 32, 47, 110, 101, 119, 10]));
+  },
+});
+`)
+	out := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out); err != nil {
+		t.Fatal(err)
+	}
+	sitemap, err := os.ReadFile(filepath.Join(out, "sitemap.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(sitemap), `<url path="/" bytes="`) || !strings.HasSuffix(string(sitemap), "</urlset>\n") {
+		t.Fatalf("sitemap = %s", sitemap)
+	}
+	search, err := os.ReadFile(filepath.Join(out, "search", "index.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var records []map[string]string
+	if err := json.Unmarshal(search, &records); err != nil || len(records) != 1 || records[0]["title"] != "Code" {
+		t.Fatalf("search index = %s, error = %v", search, err)
+	}
+	redirects, err := os.ReadFile(filepath.Join(out, "_redirects"))
+	if err != nil || string(redirects) != "/old /new\n" {
+		t.Fatalf("redirects = %q, error = %v", redirects, err)
+	}
+}
+
+func TestProjectExtensionGeneratedArtifactErrorContextAndCleanup(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+antedom.output("broken", {
+  file: "broken.txt",
+  begin(_, output) { output.write("private"); },
+  page() { throw new Error("marker"); },
+});
+`)
+	out := t.TempDir()
+	_, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out)
+	if err == nil {
+		t.Fatal("output callback error did not fail build")
+	}
+	for _, want := range []string{"antedom.js", `output "broken" page`, "marker"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q lacks %q", err, want)
+		}
+	}
+	if _, statErr := os.Stat(filepath.Join(out, "broken.txt")); !os.IsNotExist(statErr) {
+		t.Fatalf("failed output was published: %v", statErr)
+	}
+}
+
+func TestProjectExtensionOutputPageHandleExpires(t *testing.T) {
+	root := t.TempDir()
+	if err := testsites.Blog(root, 2); err != nil {
+		t.Fatal(err)
+	}
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+let saved;
+antedom.output("expiry", {
+  file: "expiry.txt",
+  page(page, output) {
+    if (saved) output.write(saved.urlPath);
+    saved = page;
+  },
+});
+`)
+	_, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "output page handle has expired") {
+		t.Fatalf("expired output page handle error = %v", err)
 	}
 }
 
