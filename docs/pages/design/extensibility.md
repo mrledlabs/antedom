@@ -106,6 +106,9 @@ antedom never ships project extensions.
   Go-backed artifact writer. They can produce arbitrary text, JSON, or byte
   files without retaining page DOMs or bodies. The original streaming JSON
   manifest remains as the `antedom.go.jsonManifest()` convenience output.
+  Generated outputs also have an automatically escaping `antedom.xml` tagged
+  template, Go-backed URL resolution, and optional strict XML validation before
+  commit. The documentation site uses them for real sitemap and RSS outputs.
 
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `new`. There is
@@ -116,10 +119,17 @@ graph yet.
 
 The generalized JavaScript output callback has been measured at 10,000 pages
 (the results are recorded with the proof-of-concept below), and the
-documentation site now configures a real JavaScript sitemap output. Page
+documentation site now configures real JavaScript sitemap and RSS outputs. Page
 text extraction remains intentionally basic concatenated rendered text; a
 search implementation may reveal that it needs configurable exclusion of
 navigation, scripts, styles, or other layout content.
+
+Generated aggregate outputs currently run during `build`, not `serve`.
+Production serve support for files such as `sitemap.xml` and `feed.xml` needs a
+cache/invalidation design: regenerating every page on every aggregate-output
+request would be correct but too expensive for large sites. Until that lands,
+these generators are complete static-build outputs but are not routes provided
+by Antedom's production server.
 
 ## Project configuration
 
@@ -561,18 +571,24 @@ it. A general JavaScript output can stream one or several artifacts:
 ```js
 antedom.output("sitemap", {
   file: "sitemap.xml",
+	validate: "xml",
 
   begin(build, output) {
-    output.write('<?xml version="1.0"?>\n<urlset>\n');
+	output.write(antedom.xml`<?xml version="1.0"?>
+<urlset>
+`);
   },
 
   page(page, output) {
-    output.write(`<url><loc>${page.urlPath}</loc></url>\n`);
+	const location = antedom.url.resolve("https://example.com", page.urlPath);
+	output.write(antedom.xml`<url><loc>${location}</loc></url>
+`);
   },
 
   end(build, output) {
-    output.write("</urlset>\n");
-    output.open("robots.txt").write("User-agent: *\n");
+	output.write(antedom.xml`</urlset>
+`);
+	output.open("robots.txt").write("User-agent: *\n");
   },
 });
 ```
@@ -582,9 +598,21 @@ The configuration has one required default `file` and optional `begin`,
 build summary containing page and asset counts. `page` receives read-only
 paths, URL, source format, rendered byte size, metadata, and lazily converted
 `html` and `text`; it never receives the DOM. `asset` receives read-only paths.
-The writer provides `write(string | Uint8Array)`, `writeJSON(value)`, and
-`open(relativePath)`. A child writer returned by `open` writes that artifact
-but cannot open further files.
+The writer provides `write(string | Uint8Array | XMLFragment)`,
+`writeJSON(value)`, and `open(relativePath)`. A child writer returned by `open`
+writes that artifact but cannot open further files.
+
+`antedom.xml` is a tagged template: static text is trusted XML structure, while
+every interpolated string, number, or boolean is escaped by Go's
+`encoding/xml`. Interpolations may also be opaque fragments returned by another
+`antedom.xml` template; `antedom.xml.join(fragments)` combines arrays of them.
+Other interpolation types and XML-illegal characters fail the build.
+`antedom.url.resolve(base, path)` validates an absolute HTTP(S) base and
+percent-encodes the page path beneath it. An output with `validate: "xml"` is
+parsed as one strict XML document after its `end` callback and before its
+temporary file is published. The tagged template prevents arbitrary content
+from becoming markup; final validation catches malformed trusted/static
+structure.
 
 Paths are confined to the output directory and cannot collide with planned
 pages, assets, or another registered output. Every artifact streams to a
@@ -605,6 +633,15 @@ page, or 3.9% wall time. JavaScript allocated about 44 MB and 800,000 objects
 more per build (roughly 4.4 KB and 80 allocations per page), largely from
 constructing JavaScript objects and `JSON.stringify`. Wall time is acceptable
 for the MVP, while allocation reduction is the clearest future optimization.
+
+The safe XML path was also compared with byte-identical raw string generation,
+with both outputs performing the same final XML validation. Across three
+samples of three 10,001-page builds, the automatically escaped template plus
+Go URL resolution averaged 1.604 s versus 1.581 s raw: about 23 ms per build,
+2.3 microseconds per page, or 1.4%. It allocated about 16 MB and 260,000 objects
+more per build (roughly 1.6 KB and 26 allocations per page). The safety layer's
+wall-time cost is small; its allocations remain visible but do not require an
+MVP fallback to unsafe string construction.
 
 `OutputGroup` begins children in registration order,
 forwards pages and assets in that order, and aborts begun children in reverse
