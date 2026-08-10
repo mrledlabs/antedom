@@ -14,6 +14,7 @@ import (
 type recordingOutput struct {
 	began, committed, aborted bool
 	pages                     []string
+	contents                  map[string]string
 	assets                    []string
 	failPage                  bool
 }
@@ -30,6 +31,14 @@ func (o *recordingOutput) WritePage(_ context.Context, page *RenderedPage) error
 		return errors.New("output received an incomplete rendered page")
 	}
 	o.pages = append(o.pages, page.Page.OutputPath)
+	if o.contents == nil {
+		o.contents = make(map[string]string)
+	}
+	content, err := renderHTMLNodes(page.Content)
+	if err != nil {
+		return err
+	}
+	o.contents[page.Page.OutputPath] = string(content)
 	return nil
 }
 func (o *recordingOutput) WriteAsset(_ context.Context, asset *Asset) error {
@@ -143,6 +152,21 @@ func TestBuildPlanAndOutput(t *testing.T) {
 	}
 	if len(out.pages) != 5 || len(out.assets) != 3 {
 		t.Fatalf("output got %d pages and %d assets", len(out.pages), len(out.assets))
+	}
+	for path, want := range map[string]string{
+		"index.html":       "<h1>hi</h1>",
+		"md/index.html":    `<h1 id="hi-there">Hi <em>there</em></h1>`,
+		"sugar/index.html": `A <em>sugar</em> page on <span>/sugar/</span>.`,
+	} {
+		content := out.contents[path]
+		if !strings.Contains(content, want) {
+			t.Errorf("content %s missing %q: %s", path, want, content)
+		}
+		for _, chrome := range []string{"<html", "<body", "<nav"} {
+			if strings.Contains(content, chrome) {
+				t.Errorf("content %s contains layout chrome %q: %s", path, chrome, content)
+			}
+		}
 	}
 
 	failing := &recordingOutput{failPage: true}

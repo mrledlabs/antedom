@@ -164,6 +164,18 @@ antedom.output("sitemap", {
   page(page, output) { output.write("<url><loc>" + siteURL + page.urlPath + "</loc></url>\n"); },
   end(_, output) { output.write("</urlset>\n"); },
 });`,
+		"rss-content": "antedom.apiVersion(1);\n" +
+			"const siteURL = \"https://example.com/docs\";\n" +
+			"antedom.output(\"rss\", {\n" +
+			"  file: \"feed.xml\", validate: \"xml\",\n" +
+			"  begin(_, output) { output.write(antedom.xml`<rss><channel>\\n`); },\n" +
+			"  page(page, output) {\n" +
+			"    const pageURL = antedom.url.resolve(siteURL, page.urlPath);\n" +
+			"    const content = antedom.html.resolveURLs(page.contentHTML, pageURL);\n" +
+			"    output.write(antedom.xml`<item><link>${pageURL}</link><description>${content}</description></item>\\n`);\n" +
+			"  },\n" +
+			"  end(_, output) { output.write(antedom.xml`</channel></rss>\\n`); },\n" +
+			"});",
 	}
 	for _, n := range []int{100, 1000, 10000} {
 		for name, config := range configs {

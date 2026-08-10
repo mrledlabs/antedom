@@ -25,21 +25,52 @@ import (
 // ante:fill attributes are left in place for the directive walk to
 // consume, so marker <template>s still unwrap.
 func Compose(doc *html.Node, load func(name string) (*html.Node, error)) (*html.Node, error) {
+	doc, _, err := compose(doc, load, false)
+	return doc, err
+}
+
+// contentBoundary identifies the page's bare/default fill after it has been
+// grafted through the layout chain. The comment nodes survive directive and
+// shortcode processing, allowing Site to recover the processed authored
+// content without knowing anything about the final layout structure.
+type contentBoundary struct {
+	start *html.Node
+	end   *html.Node
+}
+
+// composeWithContent is Compose plus tracking for the innermost page's bare
+// fill. It is used by the page build pipeline; Compose keeps its public API for
+// callers that only need the completed document.
+func composeWithContent(doc *html.Node, load func(name string) (*html.Node, error)) (*html.Node, *contentBoundary, error) {
+	return compose(doc, load, true)
+}
+
+func compose(doc *html.Node, load func(name string) (*html.Node, error), trackContent bool) (*html.Node, *contentBoundary, error) {
 	const maxDepth = 10
 	var levels [][]*html.Node // fills, innermost (page) first
+	var contentFill *html.Node
 	for {
 		root := findAttr(doc, Prefix+"layout")
 		if root == nil {
 			break
 		}
 		if len(levels) == maxDepth {
-			return nil, fmt.Errorf("ante:layout: chain deeper than %d", maxDepth)
+			return nil, nil, fmt.Errorf("ante:layout: chain deeper than %d", maxDepth)
 		}
 		name, _ := takeAttr(root, Prefix+"layout")
-		levels = append(levels, detachFills(root))
+		fills := detachFills(root)
+		if trackContent && len(levels) == 0 {
+			for _, fill := range fills {
+				if name, _ := attrVal(fill, Prefix+"fill"); name == "" {
+					contentFill = fill
+					break
+				}
+			}
+		}
+		levels = append(levels, fills)
 		next, err := load(name)
 		if err != nil {
-			return nil, fmt.Errorf("ante:layout %q: %w", name, err)
+			return nil, nil, fmt.Errorf("ante:layout %q: %w", name, err)
 		}
 		doc = next
 	}
@@ -57,7 +88,53 @@ func Compose(doc *html.Node, load func(name string) (*html.Node, error)) (*html.
 			}
 		}
 	}
-	return doc, nil
+	var boundary *contentBoundary
+	if contentFill != nil && contentFill.Parent != nil {
+		boundary = markContent(contentFill)
+	}
+	return doc, boundary, nil
+}
+
+func markContent(fill *html.Node) *contentBoundary {
+	start := &html.Node{Type: html.CommentNode, Data: "antedom:content:start"}
+	end := &html.Node{Type: html.CommentNode, Data: "antedom:content:end"}
+	parent := fill.Parent
+	parent.InsertBefore(start, fill)
+	parent.InsertBefore(end, fill.NextSibling)
+	return &contentBoundary{start: start, end: end}
+}
+
+// nodes returns the processed nodes between the boundary markers. If a
+// directive removed the marked content as a unit, the markers are detached
+// and there is no rendered content.
+func (b *contentBoundary) nodes(doc *html.Node) []*html.Node {
+	if b == nil || b.start == nil || b.end == nil || b.start.Parent == nil || b.start.Parent != b.end.Parent {
+		return nil
+	}
+	root := b.start
+	for root.Parent != nil {
+		root = root.Parent
+	}
+	if root != doc {
+		return nil
+	}
+	var nodes []*html.Node
+	for node := b.start.NextSibling; node != nil && node != b.end; node = node.NextSibling {
+		nodes = append(nodes, node)
+	}
+	return nodes
+}
+
+func (b *contentBoundary) remove() {
+	if b == nil {
+		return
+	}
+	if b.start.Parent != nil {
+		b.start.Parent.RemoveChild(b.start)
+	}
+	if b.end.Parent != nil {
+		b.end.Parent.RemoveChild(b.end)
+	}
 }
 
 // detachFills removes and returns root's element children bearing

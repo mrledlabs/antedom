@@ -100,6 +100,16 @@ func (e *Engine) Render(w io.Writer, src []byte, data map[string]any) error {
 // RenderDoc is Render for an already-parsed (e.g. composed) document.
 // It mutates doc.
 func (e *Engine) RenderDoc(w io.Writer, doc *html.Node, data map[string]any) error {
+	if err := e.processDoc(doc, data); err != nil {
+		return err
+	}
+	return html.Render(w, doc)
+}
+
+// processDoc evaluates directives and shortcodes without serializing the
+// document. Site uses this split to capture processed page content before it
+// removes private layout-boundary markers and renders the complete page.
+func (e *Engine) processDoc(doc *html.Node, data map[string]any) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -110,7 +120,7 @@ func (e *Engine) RenderDoc(w io.Writer, doc *html.Node, data map[string]any) err
 	if err := e.walkChildren(doc, scope); err != nil {
 		return err
 	}
-	return html.Render(w, doc)
+	return nil
 }
 
 // expr compiles a directive expression to a callable of one argument,

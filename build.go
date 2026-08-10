@@ -1,6 +1,7 @@
 package antedom
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -76,13 +77,33 @@ func (p *BuildPlan) pageAssets(rel string) []*Asset {
 	return out
 }
 
-// RenderedPage is the ephemeral result passed to outputs. Document and HTML
-// remain valid for the duration of WritePage; outputs retaining them must copy
-// what they need.
+// RenderedPage is the ephemeral result passed to outputs. Document, Content,
+// and HTML remain valid for the duration of WritePage; outputs retaining them
+// must copy what they need. Content contains the processed nodes from the
+// page's bare/default fill and excludes its surrounding layouts.
 type RenderedPage struct {
 	Page     *Page
 	Document *html.Node
+	Content  []*html.Node // processed authored content, excluding layout chrome
 	HTML     []byte
+}
+
+func renderHTMLNodes(nodes []*html.Node) ([]byte, error) {
+	var rendered bytes.Buffer
+	for _, node := range nodes {
+		if err := html.Render(&rendered, node); err != nil {
+			return nil, err
+		}
+	}
+	return rendered.Bytes(), nil
+}
+
+func textNodes(nodes []*html.Node) string {
+	var rendered strings.Builder
+	for _, node := range nodes {
+		rendered.WriteString(text(node))
+	}
+	return rendered.String()
 }
 
 // PageDocumentHook runs after layout composition and before template
@@ -248,11 +269,11 @@ func (s *Site) BuildWithOptions(ctx context.Context, plan *BuildPlan, output Out
 		if err = ctx.Err(); err != nil {
 			return pages, err
 		}
-		doc, body, renderErr := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(page.RelPath), options.PageDocument)
+		doc, content, body, renderErr := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(page.RelPath), options.PageDocument)
 		if renderErr != nil {
 			return pages, renderErr
 		}
-		if err = output.WritePage(ctx, &RenderedPage{Page: page, Document: doc, HTML: body}); err != nil {
+		if err = output.WritePage(ctx, &RenderedPage{Page: page, Document: doc, Content: content, HTML: body}); err != nil {
 			return pages, fmt.Errorf("writing page %s: %w", page.RelPath, err)
 		}
 		pages++

@@ -2,6 +2,7 @@ package antedom
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,11 +86,15 @@ func layoutSite(t *testing.T) *Site {
 		"pages/hello/index.html": `<template ante:layout="section.html">
   <template ante:fill="head"><link rel="stylesheet" href="style.css"></template>
   <template ante:fill>
+    <!-- antedom:content:start -->
     <ul><li ante:for="d of data.demo" ante:text="d">x</li></ul>
+    <!-- antedom:content:end -->
   </template>
 </template>`,
 		"pages/fallback.html": `<template ante:layout="section.html"></template>`,
 		"pages/plain.html":    `<body><p>no layout</p></body>`,
+		"pages/loop.html": `<template ante:layout="base.html">` +
+			`<template ante:fill ante:for="x of data.demo"><b ante:text="x"></b></template></template>`,
 	}
 	for name, content := range files {
 		path := filepath.Join(dir, filepath.FromSlash(name))
@@ -109,6 +114,35 @@ func layoutSite(t *testing.T) *Site {
 				"demo": []any{"one", "two"},
 			}}, nil
 		},
+	}
+}
+
+func TestNestedLayoutContentBoundary(t *testing.T) {
+	site := layoutSite(t)
+	plan, err := site.Plan()
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := &recordingOutput{}
+	if _, err := site.BuildWith(context.Background(), plan, output); err != nil {
+		t.Fatal(err)
+	}
+	content := output.contents["hello/index.html"]
+	if !strings.Contains(content, "<ul><li>one</li><li>two</li></ul>") {
+		t.Fatalf("nested page content missing processed fill: %s", content)
+	}
+	for _, authored := range []string{"antedom:content:start", "antedom:content:end"} {
+		if count := strings.Count(content, authored); count != 1 {
+			t.Errorf("authored marker-like comment %q occurs %d times in content: %s", authored, count, content)
+		}
+	}
+	for _, chrome := range []string{"<html", "section", "hello index", "pick a page"} {
+		if strings.Contains(content, chrome) {
+			t.Errorf("nested page content contains layout chrome %q: %s", chrome, content)
+		}
+	}
+	if got := output.contents["loop/index.html"]; got != "<b>one</b><b>two</b>" {
+		t.Errorf("looped default fill content = %q", got)
 	}
 }
 
@@ -143,6 +177,11 @@ func TestComposeChain(t *testing.T) {
 	for _, bad := range []string{"<template", "ante:", "nothing here yet", "pick a page"} {
 		if strings.Contains(out, bad) {
 			t.Errorf("output contains %q", bad)
+		}
+	}
+	for _, authored := range []string{"antedom:content:start", "antedom:content:end"} {
+		if count := strings.Count(out, authored); count != 1 {
+			t.Errorf("rendered page comment %q occurs %d times; private anchor may have leaked: %s", authored, count, out)
 		}
 	}
 }

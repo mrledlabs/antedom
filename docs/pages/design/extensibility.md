@@ -133,9 +133,12 @@ graph yet.
 The generalized JavaScript output callback has been measured at 10,000 pages
 (the results are recorded with the proof-of-concept below), and the
 documentation site now configures real JavaScript sitemap and RSS outputs. Page
-text extraction remains intentionally basic concatenated rendered text; a
-search implementation may reveal that it needs configurable exclusion of
-navigation, scripts, styles, or other layout content.
+outputs distinguish the complete rendered document (`html`/`text`) from the
+processed authored default-fill fragment (`contentHTML`/`contentText`). The RSS
+generator uses the latter, so layout navigation, headers, bylines, and footers
+do not become feed content. Complete-page text extraction remains intentionally
+basic concatenated rendered text; a search implementation may reveal that it
+needs configurable exclusion rules beyond the authored-content boundary.
 
 Generated aggregate outputs currently run during `build`, not `serve`.
 Production serve support for files such as `sitemap.xml` and `feed.xml` needs a
@@ -610,7 +613,13 @@ The configuration has one required default `file` and optional `begin`,
 `page`, `asset`, and `end` functions. `begin` and `end` receive a read-only
 build summary containing page and asset counts. `page` receives read-only
 paths, URL, source format, rendered byte size, metadata, and lazily converted
-`html` and `text`; it never receives the DOM. `asset` receives read-only paths.
+`html`, `text`, `contentHTML`, and `contentText`; it never receives the DOM.
+The content fields contain the page's bare/default fill after Markdown,
+highlighting, directives, and shortcodes have run, but exclude every
+surrounding layout level. Boundary markers are private comments inserted during
+composition and removed before full-page serialization, so they never appear
+in either output. All four representations are converted only if read.
+`asset` receives read-only paths.
 The writer provides `write(string | Uint8Array | XMLFragment)`,
 `writeJSON(value)`, and `open(relativePath)`. A child writer returned by `open`
 writes that artifact but cannot open further files.
@@ -626,6 +635,16 @@ parsed as one strict XML document after its `end` callback and before its
 temporary file is published. The tagged template prevents arbitrary content
 from becoming markup; final validation catches malformed trusted/static
 structure.
+
+`antedom.html.resolveURLs(fragment, pageURL)` parses an HTML content fragment,
+resolves `href`, `src`, `poster`, `cite`, `action`, and `formaction` attributes
+against its canonical page URL and serializes a fragment without adding
+document wrappers. Absolute references keep any scheme, including custom
+application protocols: resolution is deliberately not sanitization. A future
+sanitizer must be a separate, explicit allowlist policy rather than an
+incomplete scheme denylist.
+The RSS generator applies it to `page.contentHTML` before XML interpolation so
+relative links and images remain meaningful outside the rendered site page.
 
 Paths are confined to the output directory and cannot collide with planned
 pages, assets, or another registered output. Every artifact streams to a
@@ -655,6 +674,17 @@ Go URL resolution averaged 1.604 s versus 1.581 s raw: about 23 ms per build,
 more per build (roughly 1.6 KB and 26 allocations per page). The safety layer's
 wall-time cost is small; its allocations remain visible but do not require an
 MVP fallback to unsafe string construction.
+
+A worst-case RSS-content benchmark reads, serializes, reparses for URL
+resolution, and XML-escapes the authored fragment of every one of 10,001 pages
+(a real feed normally selects and limits far fewer entries). Across three
+samples of three builds it averaged 1.730 s versus 1.511 s for a minimal
+extension: about 219 ms per build, 21.9 microseconds per page, or 14.5%. It
+allocated about 145 MB and 1.33 million objects more per build. This remains
+linear and acceptable for the deliberately worst-case experiment; feed entry
+selection is the primary production bound, while a future combined Go
+resolve-and-escape path could reduce allocations if very large full-site feeds
+become important.
 
 `OutputGroup` begins children in registration order,
 forwards pages and assets in that order, and aborts begun children in reverse

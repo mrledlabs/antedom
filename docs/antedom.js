@@ -65,12 +65,13 @@ antedom.output("rss", {
   page(page) {
     if (!page.meta.date || page.meta.params?.feed === false) return;
 
+    const url = antedom.url.resolve(siteURL, page.urlPath);
     feedEntries.push({
       title: page.meta.title,
       date: page.meta.date,
       published: rssDate(page.meta.date),
-      url: antedom.url.resolve(siteURL, page.urlPath),
-      html: page.html,
+      url,
+      html: antedom.html.resolveURLs(page.contentHTML, url),
     });
   },
 

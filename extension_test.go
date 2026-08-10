@@ -100,6 +100,10 @@ func TestLoadProjectExtension(t *testing.T) {
 			src:  `antedom.url.resolve("https://example.com", "/");`,
 			want: "must be called before antedom.url.resolve",
 		},
+		"html before version": {
+			src:  `antedom.html.resolveURLs("<p>x</p>", "https://example.com/");`,
+			want: "must be called before antedom.html.resolveURLs",
+		},
 		"xml is not a normal function": {
 			src:  `antedom.apiVersion(1); antedom.xml("<root/>");`,
 			want: "must be used as a tagged template",
@@ -240,6 +244,12 @@ antedom.output("site-files", {
     if (!page.html.includes("package main") || !page.text.includes("package main")) {
       throw new Error("rendered content missing");
     }
+	if (!page.contentHTML.includes("package main") || !page.contentText.includes("package main")) {
+	  throw new Error("authored content missing");
+	}
+	if (page.contentHTML.includes("<html") || page.contentHTML.includes("<title")) {
+	  throw new Error("layout leaked into authored content");
+	}
     try { page.meta.title = "changed"; } catch (_) {}
     if (page.meta.title !== "Code") throw new Error("metadata was mutable");
     output.write('<url path="' + page.urlPath + '" bytes="' + page.size + '"/>\n');

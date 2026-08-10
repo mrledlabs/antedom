@@ -76,6 +76,13 @@ func loadProjectExtension(root string) (*projectExtension, error) {
 	if err := api.DefineDataProperty("url", urlAPI, sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
 		return nil, err
 	}
+	htmlAPI := vm.NewObject()
+	if err := htmlAPI.DefineDataProperty("resolveURLs", vm.ToValue(ext.resolveHTMLURLs), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	if err := api.DefineDataProperty("html", htmlAPI, sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
 	goAPI := vm.NewObject()
 	if err := goAPI.DefineDataProperty("jsonManifest", vm.ToValue(ext.jsonManifest), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
 		return nil, err
@@ -341,11 +348,13 @@ func (o *javascriptArtifactOutput) invoke(stage string, fn sobek.Callable, args 
 // html, and text conversions are memoized so a callback reading a field
 // repeatedly converts the body or walks the DOM at most once per page.
 type outputPageValue struct {
-	extension *projectExtension
-	page      *RenderedPage
-	meta      sobek.Value
-	html      sobek.Value
-	text      sobek.Value
+	extension   *projectExtension
+	page        *RenderedPage
+	meta        sobek.Value
+	html        sobek.Value
+	text        sobek.Value
+	contentHTML sobek.Value
+	contentText sobek.Value
 }
 
 func (p *outputPageValue) Get(key string) sobek.Value {
@@ -380,6 +389,20 @@ func (p *outputPageValue) Get(key string) sobek.Value {
 			p.text = p.extension.vm.ToValue(text(p.page.Document))
 		}
 		return p.text
+	case "contentHTML":
+		if p.contentHTML == nil {
+			rendered, err := renderHTMLNodes(p.page.Content)
+			if err != nil {
+				panic(p.extension.vm.NewGoError(err))
+			}
+			p.contentHTML = p.extension.vm.ToValue(string(rendered))
+		}
+		return p.contentHTML
+	case "contentText":
+		if p.contentText == nil {
+			p.contentText = p.extension.vm.ToValue(textNodes(p.page.Content))
+		}
+		return p.contentText
 	default:
 		return nil
 	}
@@ -395,7 +418,7 @@ func (p *outputPageValue) Has(key string) bool {
 }
 func (*outputPageValue) Delete(string) bool { return false }
 func (*outputPageValue) Keys() []string {
-	return []string{"sourcePath", "relPath", "urlPath", "outputPath", "format", "size", "meta", "html", "text"}
+	return []string{"sourcePath", "relPath", "urlPath", "outputPath", "format", "size", "meta", "html", "text", "contentHTML", "contentText"}
 }
 
 func (o *javascriptArtifactOutput) writerValue(file string) sobek.Value {

@@ -60,7 +60,7 @@ func (s *Site) renderWithHook(ctx context.Context, w io.Writer, rel string, hook
 		// Not in the plan (e.g. removed between routing and planning).
 		page = &Page{RelPath: rel, URLPath: urlPath(rel)}
 	}
-	_, body, err := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(rel), hook)
+	_, _, body, err := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(rel), hook)
 	if err != nil {
 		return err
 	}
@@ -68,28 +68,29 @@ func (s *Site) renderWithHook(ctx context.Context, w io.Writer, rel string, hook
 	return err
 }
 
-func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, assets []*Asset, hook PageDocumentHook) (*html.Node, []byte, error) {
+func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, assets []*Asset, hook PageDocumentHook) (*html.Node, []*html.Node, []byte, error) {
 	rel := page.RelPath
 	doc, err := s.parse(filepath.Join(s.Pages, filepath.FromSlash(rel)))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	var content *contentBoundary
 	if s.Layout != "" {
-		doc, err = Compose(doc, func(name string) (*html.Node, error) {
+		doc, content, err = composeWithContent(doc, func(name string) (*html.Node, error) {
 			return s.parse(filepath.Join(s.Layout, filepath.FromSlash(name)))
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("composing %s: %w", rel, err)
+			return nil, nil, nil, fmt.Errorf("composing %s: %w", rel, err)
 		}
 	}
 	if hook != nil {
 		if err := hook(ctx, page, doc); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	data, err := s.Data()
 	if err != nil {
-		return nil, nil, fmt.Errorf("assembling data: %w", err)
+		return nil, nil, nil, fmt.Errorf("assembling data: %w", err)
 	}
 	data["pages"] = pages
 	u := urlPath(rel)
@@ -109,18 +110,23 @@ func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[s
 	data["page"] = pageScope
 	engine, err := New()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if s.Layout != "" {
 		engine.Shortcodes = func(name string) ([]byte, error) {
 			return os.ReadFile(filepath.Join(s.Layout, "shortcode", name+".html"))
 		}
 	}
-	var buf bytes.Buffer
-	if err := engine.RenderDoc(&buf, doc, data); err != nil {
-		return nil, nil, fmt.Errorf("rendering %s: %w", rel, err)
+	if err := engine.processDoc(doc, data); err != nil {
+		return nil, nil, nil, fmt.Errorf("rendering %s: %w", rel, err)
 	}
-	return doc, buf.Bytes(), nil
+	contentNodes := content.nodes(doc)
+	content.remove()
+	var buf bytes.Buffer
+	if err := html.Render(&buf, doc); err != nil {
+		return nil, nil, nil, fmt.Errorf("serializing %s: %w", rel, err)
+	}
+	return doc, contentNodes, buf.Bytes(), nil
 }
 
 // assetScope shapes a page's bundle for template scope (page.assets):
