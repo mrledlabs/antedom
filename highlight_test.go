@@ -13,6 +13,7 @@ func TestHighlightDocument(t *testing.T) {
 <pre><code class="language-go extra">package main
 func main() {}</code></pre>
 <pre><code>plain &amp; unlabelled</code></pre>
+<pre style="margin:0"><code class="language-go">var kept int</code></pre>
 </body></html>`))
 	if err != nil {
 		t.Fatal(err)
@@ -21,8 +22,8 @@ func main() {}</code></pre>
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count != 1 {
-		t.Fatalf("highlighted %d blocks, want 1", count)
+	if count != 2 {
+		t.Fatalf("highlighted %d blocks, want 2", count)
 	}
 	var out bytes.Buffer
 	if err := html.Render(&out, doc); err != nil {
@@ -30,9 +31,13 @@ func main() {}</code></pre>
 	}
 	for _, want := range []string{
 		`<code class="language-go extra"><span`,
-		`style=`,
 		`>package</span>`,
 		`<code>plain &amp; unlabelled</code>`,
+		// The theme's base colors are applied to the block's <pre>, appended
+		// after any existing declarations. The default github theme defines
+		// only a background; themes with a base foreground emit color too.
+		`<pre style="background-color:#`,
+		`<pre style="margin:0;background-color:#`,
 	} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("highlighted document lacks %q:\n%s", want, out.String())

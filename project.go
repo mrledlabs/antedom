@@ -106,7 +106,9 @@ func (o *Operation) Handler() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		})
 	}
-	next := o.Project.Site().Handler()
+	next := o.Project.Site().HandlerWithOptions(HandlerOptions{
+		PageDocument: o.servePageDocument,
+	})
 	ctx := o.operationContext()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
@@ -120,6 +122,20 @@ func (o *Operation) Handler() http.Handler {
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+// servePageDocument loads the project extension for one request's render.
+// Serve loads it per request for the same reason it re-plans the site per
+// request: edits to antedom.js take effect immediately. It also confines each
+// Sobek runtime to one request's goroutine — runtimes are not goroutine-safe,
+// and concurrent requests must not share one. Hooks therefore cannot carry
+// state between pages in serve the way they can within a single build.
+func (o *Operation) servePageDocument() (PageDocumentHook, error) {
+	extension, err := loadProjectExtension(o.Project.Root)
+	if err != nil || extension == nil {
+		return nil, err
+	}
+	return extension.pageDocument, nil
 }
 
 // NewPage scaffolds a page at rel, relative to the project's pages directory,

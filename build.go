@@ -51,6 +51,16 @@ type BuildPlan struct {
 	pageData []map[string]any
 }
 
+// page returns the planned page at rel, or nil if rel is not a planned page.
+func (p *BuildPlan) page(rel string) *Page {
+	for _, page := range p.Pages {
+		if page.RelPath == rel {
+			return page
+		}
+	}
+	return nil
+}
+
 // pageAssets returns the opaque files sharing rel's source directory,
 // in name order: the page's bundle, exposed to templates as
 // page.assets (see assetScope). Sibling pages in one directory share a

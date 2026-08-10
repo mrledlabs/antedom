@@ -36,6 +36,17 @@ func highlightDocument(doc *html.Node, options highlightOptions) (int, error) {
 		return 0, fmt.Errorf("unknown highlight style %q", options.Style)
 	}
 	formatter := chromahtml.New(chromahtml.PreventSurroundingPre(true))
+	// The dropped chroma <pre> wrapper is where the theme's base foreground
+	// and background live; reapply them to the block's own <pre> so any theme
+	// stays readable whether the surrounding site renders light or dark.
+	background := style.Get(chroma.Background)
+	var blockStyle strings.Builder
+	if background.Colour.IsSet() {
+		fmt.Fprintf(&blockStyle, "color:%s;", background.Colour)
+	}
+	if background.Background.IsSet() {
+		fmt.Fprintf(&blockStyle, "background-color:%s;", background.Background)
+	}
 	count := 0
 	var walk func(*html.Node) error
 	walk = func(node *html.Node) error {
@@ -62,6 +73,9 @@ func highlightDocument(doc *html.Node, options highlightOptions) (int, error) {
 						return fmt.Errorf("parsing highlighted language %q: %w", language, err)
 					}
 					setChildren(node, fragment...)
+					if blockStyle.Len() > 0 {
+						appendStyle(node.Parent, blockStyle.String())
+					}
 					count++
 					return nil // do not traverse the generated token spans
 				}
@@ -75,6 +89,25 @@ func highlightDocument(doc *html.Node, options highlightOptions) (int, error) {
 		return nil
 	}
 	return count, walk(doc)
+}
+
+// appendStyle appends css declarations to node's style attribute, after any
+// existing declarations so the appended ones win.
+func appendStyle(node *html.Node, css string) {
+	for i, attr := range node.Attr {
+		if attr.Key == "style" {
+			v := strings.TrimSpace(attr.Val)
+			if strings.HasSuffix(v, css) {
+				return // repeated highlight call; already applied
+			}
+			if v != "" && !strings.HasSuffix(v, ";") {
+				v += ";"
+			}
+			node.Attr[i].Val = v + css
+			return
+		}
+	}
+	node.Attr = append(node.Attr, html.Attribute{Key: "style", Val: css})
 }
 
 func codeLanguage(node *html.Node) string {

@@ -82,10 +82,24 @@ antedom never ships project extensions.
   JavaScript hook rather than registered once as a Go transform: the
   register-once fallback existed for the case where the per-page JS crossing
   proved too expensive, and at roughly 2 µs per no-op crossing it was not
-  needed.
+  needed. Highlighted blocks are self-contained: the theme's base foreground
+  and background are applied inline to the block's `<pre>`, so any theme
+  stays readable whether the surrounding site renders light or dark.
+  Class-based output with per-color-scheme palettes would need generated
+  stylesheets and is deferred.
+
+- Serve runs the same `page:document` hooks as build. A rendered request
+  loads `antedom.js` afresh — matching serve's existing per-request page
+  discovery — so extension edits take effect immediately, and every request
+  gets its own goroutine-confined Sobek runtime (runtimes are not
+  goroutine-safe, so concurrent requests must not share one). Hooks receive
+  the same plan-backed page model as build, and a test asserts serve and
+  build produce byte-identical page output. One consequence: hook state
+  cannot span pages in serve the way it can within a single build, because
+  each request is a fresh runtime.
 
 Rendering is still sequential. Serve mode still discovers the current page
-list per request. The MVP extension is not used by `serve` or `new`. There is
+list per request. The MVP extension is not used by `new`. There is
 no module loader, Go capability registry, multi-output fan-out, or incremental
 dependency graph yet.
 
@@ -481,6 +495,11 @@ Serve mode distinguishes the long-lived server from each build generation:
 - Publish a generation only after it succeeds.
 - Recreate the extension runtime when configuration code changes.
 
+Today's MVP is a degenerate form of this: with no generations yet, each
+rendered request is its own generation — it re-plans the site and reloads the
+extension. When generations arrive, plan and extension loading move out of
+the request path and are recreated per generation instead.
+
 Extensions and capabilities should be able to report dependencies:
 
 ```js
@@ -559,10 +578,12 @@ so the loader must enforce it: if `antedom.js` exists but never calls
 `apiVersion`, or calls it after registering a hook or output, the build fails.
 The compatibility gate cannot be skipped silently.
 
-The MVP explicitly excludes `new` hooks, serve integration, custom CLI
+The MVP explicitly excludes `new` hooks, custom CLI
 commands, relative imports, external packages, generic DOM traversal, hook
 dependency ordering, network and filesystem APIs, concurrency, and incremental
-rebuilds.
+rebuilds. Serve integration was added after the initial slice: serve runs the
+same hook per rendered request with a per-request extension load, as described
+in the implementation status.
 
 The HTML output should remain enabled by default. Add a small fan-out output
 that sends each ephemeral `RenderedPage` synchronously to HTML and manifest

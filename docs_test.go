@@ -1,6 +1,7 @@
 package antedom
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -10,11 +11,11 @@ import (
 
 // TestDocsSite builds docs/ — the docs are themselves an antedom
 // site (cmd/antedom serves them with -site docs) — so the docs
-// cannot drift from the engine.
+// cannot drift from the engine. It builds through the project layer
+// so the docs' own antedom.js extension is exercised too.
 func TestDocsSite(t *testing.T) {
-	s := &Site{
-		Pages:  "docs/pages",
-		Layout: "docs/layout",
+	project := &Project{
+		Root: "docs",
 		Data: func() (map[string]any, error) {
 			src, err := os.ReadFile("docs/data/site.json")
 			if err != nil {
@@ -31,7 +32,7 @@ func TestDocsSite(t *testing.T) {
 		},
 	}
 	out := t.TempDir()
-	pages, err := s.Build(out)
+	pages, err := project.Operation(context.Background(), OperationBuild).Build(out)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,10 @@ func TestDocsSite(t *testing.T) {
 			"<title>antedom: Templating</title>",
 			`<a aria-current="page" href="/templating/">Templating</a>`,
 			"<h1>Templating</h1>",
-			"&lt;template ante:layout=&#34;base.html&#34;&gt;", // fenced examples stay text
+			// Fenced examples are highlighted by docs/antedom.js yet stay
+			// escaped text: tags become token spans, not elements.
+			`<code class="language-html"><span`,
+			`&#34;base.html&#34;</span>`,
 		},
 		"markdown/index.html": {
 			"<h1>Markdown pages</h1>",
@@ -66,8 +70,8 @@ func TestDocsSite(t *testing.T) {
 			`<blockquote cite="https://ask.metafilter.com/55153/Whats-the-middle-ground-between-FU-and-Welcome#830421">`,
 			"<p>\n  This is a classic case of Ask Culture meets Guess Culture.\n</p>",
 			`<figcaption><a href="https://ask.metafilter.com/55153/Whats-the-middle-ground-between-FU-and-Welcome#830421">tangerine on MetaFilter</a></figcaption>`,
-			// Fenced examples stay text.
-			"&lt;shortcode-quotefig citeurl=",
+			// Fenced examples stay escaped text (highlighted, not expanded).
+			`&lt;<span style="color:#7ee787">shortcode-quotefig</span>`,
 		},
 		"demo/index.html": {
 			"<li>1. ante:if</li>",

@@ -43,22 +43,29 @@ type Site struct {
 // to Pages) into w. Each render gets its own Engine: template JS can
 // leak globals into a runtime, so none is reused across pages.
 func (s *Site) render(w io.Writer, rel string) error {
-	plan, err := s.Plan()
+	return s.renderWithHook(context.Background(), w, rel, nil)
+}
+
+// renderWithHook is render with the build pipeline's page:document hook.
+// The page given to the hook comes from the same plan a build would use, so
+// hooks observe identical page paths and metadata whether a page is rendered
+// by build or per request by serve.
+func (s *Site) renderWithHook(ctx context.Context, w io.Writer, rel string, hook PageDocumentHook) error {
+	plan, err := s.PlanContext(ctx)
 	if err != nil {
 		return fmt.Errorf("listing pages: %w", err)
 	}
-	doc, body, err := s.renderPage(rel, plan)
+	page := plan.page(rel)
+	if page == nil {
+		// Not in the plan (e.g. removed between routing and planning).
+		page = &Page{RelPath: rel, URLPath: urlPath(rel)}
+	}
+	_, body, err := s.renderPageWithHook(ctx, page, plan.pageData, plan.pageAssets(rel), hook)
 	if err != nil {
 		return err
 	}
-	_ = doc
 	_, err = w.Write(body)
 	return err
-}
-
-func (s *Site) renderPage(rel string, plan *BuildPlan) (*html.Node, []byte, error) {
-	page := &Page{RelPath: rel, URLPath: urlPath(rel)}
-	return s.renderPageWithHook(context.Background(), page, plan.pageData, plan.pageAssets(rel), nil)
 }
 
 func (s *Site) renderPageWithHook(ctx context.Context, page *Page, pages []map[string]any, assets []*Asset, hook PageDocumentHook) (*html.Node, []byte, error) {
@@ -409,6 +416,19 @@ func (s *Site) Build(out string) (int, error) {
 // Page-source .md is never served. Mount under a prefix with
 // http.StripPrefix.
 func (s *Site) Handler() http.Handler {
+	return s.HandlerWithOptions(HandlerOptions{})
+}
+
+// HandlerOptions supplies optional per-request behavior for Handler.
+type HandlerOptions struct {
+	// PageDocument, if non-nil, is called once per rendered page request and
+	// returns that render's page:document hook (nil for none). An error fails
+	// the request. It is not consulted for verbatim files or redirects.
+	PageDocument func() (PageDocumentHook, error)
+}
+
+// HandlerWithOptions is Handler with optional per-request pipeline hooks.
+func (s *Site) HandlerWithOptions(options HandlerOptions) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if rel == "" || !strings.Contains(path.Base(rel), ".") {
@@ -455,10 +475,18 @@ func (s *Site) Handler() http.Handler {
 				}
 				continue
 			}
+			var hook PageDocumentHook
+			if options.PageDocument != nil {
+				var err error
+				if hook, err = options.PageDocument(); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
 			// Render to a buffer so an error returns a clean 500
 			// instead of trailing a half-written page.
 			var buf bytes.Buffer
-			if err := s.render(&buf, src); err != nil {
+			if err := s.renderWithHook(r.Context(), &buf, src, hook); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

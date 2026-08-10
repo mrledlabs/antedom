@@ -2,9 +2,12 @@ package antedom
 
 import (
 	"context"
+	"fmt"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mrled/antedom/testsites"
@@ -240,6 +243,126 @@ antedom.on("page:document", (page) => { `+tc.call+`; });
 				}
 			}
 		})
+	}
+}
+
+// writeCodeSite writes a one-page site whose layout evaluates page metadata
+// and whose page holds a fenced code block, plus one verbatim asset.
+func writeCodeSite(t *testing.T, root string) {
+	t.Helper()
+	files := map[string]string{
+		"layout/base.html": `<html><head><title ante:text="page.title"></title></head><body><main ante:slot></main></body></html>`,
+		"pages/index.md": `<script ante:meta type="application/json">
+{"title":"Code", "layout":"base.html"}
+</script>
+
+` + "```go\npackage main\n```" + `
+`,
+		"pages/plain.txt": "verbatim asset\n",
+	}
+	for name, src := range files {
+		path := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+const highlightExtension = `
+antedom.apiVersion(1);
+antedom.on("page:document", (page) => {
+  if (!page.meta.title) throw new Error("page metadata missing in hook");
+  page.document.highlight({style: "github"});
+});
+`
+
+func TestServeMatchesBuildWithExtension(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, highlightExtension)
+
+	out := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out); err != nil {
+		t.Fatal(err)
+	}
+	built, err := os.ReadFile(filepath.Join(out, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewProject(root).Operation(context.Background(), OperationServe).Handler()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != 200 {
+		t.Fatalf("serve status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `<code class="language-go"><span`) {
+		t.Fatalf("served page not highlighted: %s", rec.Body.String())
+	}
+	if rec.Body.String() != string(built) {
+		t.Fatalf("serve and build output differ:\nbuild: %s\nserve: %s", built, rec.Body.String())
+	}
+}
+
+func TestServeReloadsExtensionPerRequest(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	h := NewProject(root).Operation(context.Background(), OperationServe).Handler()
+
+	get := func(url string) *httptest.ResponseRecorder {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", url, nil))
+		return rec
+	}
+
+	if rec := get("/"); rec.Code != 200 || strings.Contains(rec.Body.String(), "<span") {
+		t.Fatalf("no-extension serve = %d, want plain page: %s", rec.Code, rec.Body.String())
+	}
+
+	writeExtension(t, root, highlightExtension)
+	if rec := get("/"); rec.Code != 200 || !strings.Contains(rec.Body.String(), `<code class="language-go"><span`) {
+		t.Fatalf("added extension not picked up: %d %s", rec.Code, rec.Body.String())
+	}
+
+	writeExtension(t, root, `antedom.on("page:document", () => {});`)
+	if rec := get("/"); rec.Code != 500 || !strings.Contains(rec.Body.String(), "antedom.js") {
+		t.Fatalf("broken extension = %d, want 500 naming antedom.js: %s", rec.Code, rec.Body.String())
+	}
+	if rec := get("/plain.txt"); rec.Code != 200 || !strings.Contains(rec.Body.String(), "verbatim asset") {
+		t.Fatalf("verbatim asset with broken extension = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestServeExtensionConcurrentRequests(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, highlightExtension)
+	h := NewProject(root).Operation(context.Background(), OperationServe).Handler()
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 8*4)
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 4 {
+				rec := httptest.NewRecorder()
+				h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+				if rec.Code != 200 || !strings.Contains(rec.Body.String(), `<code class="language-go"><span`) {
+					errs <- fmt.Errorf("concurrent serve = %d: %s", rec.Code, rec.Body.String())
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
 	}
 }
 
