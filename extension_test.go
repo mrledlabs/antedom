@@ -88,6 +88,30 @@ func TestLoadProjectExtension(t *testing.T) {
 			src:  `antedom.apiVersion(1); antedom.output("custom", {file: "../custom.txt"});`,
 			want: "must stay within the output directory",
 		},
+		"invalid output validator": {
+			src:  `antedom.apiVersion(1); antedom.output("custom", {file: "custom.txt", validate: "html"});`,
+			want: `validate must be "xml"`,
+		},
+		"xml before version": {
+			src:  "antedom.xml`<root/>`;",
+			want: "must be called before antedom.xml",
+		},
+		"url before version": {
+			src:  `antedom.url.resolve("https://example.com", "/");`,
+			want: "must be called before antedom.url.resolve",
+		},
+		"xml is not a normal function": {
+			src:  `antedom.apiVersion(1); antedom.xml("<root/>");`,
+			want: "must be used as a tagged template",
+		},
+		"invalid URL base": {
+			src:  `antedom.apiVersion(1); antedom.url.resolve("file:///tmp", "/page/");`,
+			want: "base must be an absolute HTTP(S) URL",
+		},
+		"URL escapes base": {
+			src:  `antedom.apiVersion(1); antedom.url.resolve("https://example.com/docs", "/../page/");`,
+			want: "path must stay beneath the base URL",
+		},
 		"duplicate output name": {
 			src: `antedom.apiVersion(1);
 const a = antedom.go.jsonManifest({file: "a.json"});

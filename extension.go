@@ -26,6 +26,7 @@ type projectExtension struct {
 type extensionOutput struct {
 	name      string
 	file      string
+	validate  string
 	callbacks *extensionOutputCallbacks
 }
 
@@ -59,6 +60,20 @@ func loadProjectExtension(root string) (*projectExtension, error) {
 		return nil, err
 	}
 	if err := api.DefineDataProperty("output", vm.ToValue(ext.output), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	xmlTag := vm.ToValue(ext.xmlTemplate).ToObject(vm)
+	if err := xmlTag.DefineDataProperty("join", vm.ToValue(ext.xmlJoin), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	if err := api.DefineDataProperty("xml", xmlTag, sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	urlAPI := vm.NewObject()
+	if err := urlAPI.DefineDataProperty("resolve", vm.ToValue(ext.resolveURL), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	if err := api.DefineDataProperty("url", urlAPI, sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
 		return nil, err
 	}
 	goAPI := vm.NewObject()
@@ -135,7 +150,7 @@ func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
 		}
 		for _, key := range obj.Keys() {
 			switch key {
-			case "file", "begin", "page", "asset", "end":
+			case "file", "validate", "begin", "page", "asset", "end":
 			default:
 				panic(e.vm.NewTypeError("unknown antedom.output option %q", key))
 			}
@@ -152,6 +167,14 @@ func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
 		if file, err = cleanArtifactPath(file); err != nil {
 			panic(e.vm.NewTypeError("antedom.output %q file must stay within the output directory", name))
 		}
+		validate := ""
+		if value := obj.Get("validate"); value != nil && !sobek.IsUndefined(value) {
+			var ok bool
+			validate, ok = value.Export().(string)
+			if !ok || validate != "xml" {
+				panic(e.vm.NewTypeError("antedom.output %q validate must be %q", name, "xml"))
+			}
+		}
 		callbacks := &extensionOutputCallbacks{}
 		for key, target := range map[string]*sobek.Callable{
 			"begin": &callbacks.begin, "page": &callbacks.page,
@@ -167,7 +190,7 @@ func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
 			}
 			*target = fn
 		}
-		registered = extensionOutput{name: name, file: file, callbacks: callbacks}
+		registered = extensionOutput{name: name, file: file, validate: validate, callbacks: callbacks}
 	}
 	for _, output := range e.outputs {
 		if output.file == registered.file {
@@ -274,6 +297,11 @@ func (o *javascriptArtifactOutput) Commit(ctx context.Context) error {
 	if err := o.invoke("end", o.config.callbacks.end, o.planValue, o.value); err != nil {
 		return err
 	}
+	if o.config.validate == "xml" {
+		if err := o.writer.ValidateXML(o.config.file); err != nil {
+			return fmt.Errorf("extension %s: output %q validate %s: %w", o.extension.path, o.config.name, o.config.file, err)
+		}
+	}
 	if err := o.writer.Commit(ctx); err != nil {
 		return err
 	}
@@ -370,12 +398,14 @@ func (o *javascriptArtifactOutput) writerValue(file string) sobek.Value {
 		switch exported := call.Argument(0).Export().(type) {
 		case string:
 			data = []byte(exported)
+		case *xmlFragment:
+			data = exported.data
 		case []byte:
 			data = exported
 		case sobek.ArrayBuffer:
 			data = exported.Bytes()
 		default:
-			panic(o.extension.vm.NewTypeError("output.write requires a string or Uint8Array"))
+			panic(o.extension.vm.NewTypeError("output.write requires a string, Uint8Array, or antedom.xml fragment"))
 		}
 		if err := o.writer.Write(file, data); err != nil {
 			panic(o.extension.vm.NewGoError(err))

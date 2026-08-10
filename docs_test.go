@@ -119,7 +119,14 @@ func TestDocsSite(t *testing.T) {
 		// the engine, so the two cannot drift.
 		"sitemap.xml": {
 			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
-			`<url><loc>https://mrled.github.io/antedom/templating/</loc></url>`,
+			`<loc>https://mrled.github.io/antedom/templating/</loc>`,
+			`<lastmod>2026-08-01</lastmod>`,
+		},
+		"feed.xml": {
+			`<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">`,
+			`<title>Third post</title>`,
+			`<pubDate>Sat, 01 Aug 2026 00:00:00 GMT</pubDate>`,
+			`&lt;html&gt;`,
 		},
 		// No ante:layout: opaque, copied verbatim, absent from the nav.
 		"pages/non-page-example.md": {"# Non-page Markdown file example"},
@@ -139,6 +146,19 @@ func TestDocsSite(t *testing.T) {
 		if strings.Contains(string(data), "<script ante:meta") {
 			t.Errorf("%s: page metadata script not dropped", name)
 		}
+	}
+	feedData, err := os.ReadFile(filepath.Join(out, "feed.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lastFeedEntry := -1
+	for _, title := range []string{"Third post", "Second post", "First post"} {
+		index := strings.Index(string(feedData), "<title>"+title+"</title>")
+		if index <= lastFeedEntry {
+			t.Errorf("feed entries are not newest-first: %s", feedData)
+			break
+		}
+		lastFeedEntry = index
 	}
 	// Nav order: weight ascending, then date newest-first for the
 	// unweighted blog posts, children after their section index.

@@ -122,6 +122,25 @@ antedom.output("manifest", {
 	  },
 	  end(_, output) { output.write("]\n"); },
 	});`,
+		"xml-sitemap": "antedom.apiVersion(1);\n" +
+			"const siteURL = \"https://example.com/docs\";\n" +
+			"antedom.output(\"sitemap\", {\n" +
+			"  file: \"sitemap.xml\", validate: \"xml\",\n" +
+			"  begin(_, output) { output.write(antedom.xml`<urlset>\\n`); },\n" +
+			"  page(page, output) {\n" +
+			"    const location = antedom.url.resolve(siteURL, page.urlPath);\n" +
+			"    output.write(antedom.xml`<url><loc>${location}</loc></url>\\n`);\n" +
+			"  },\n" +
+			"  end(_, output) { output.write(antedom.xml`</urlset>\\n`); },\n" +
+			"});",
+		"raw-xml-sitemap": `antedom.apiVersion(1);
+const siteURL = "https://example.com/docs";
+antedom.output("sitemap", {
+  file: "sitemap.xml", validate: "xml",
+  begin(_, output) { output.write("<urlset>\n"); },
+  page(page, output) { output.write("<url><loc>" + siteURL + page.urlPath + "</loc></url>\n"); },
+  end(_, output) { output.write("</urlset>\n"); },
+});`,
 	}
 	for _, n := range []int{100, 1000, 10000} {
 		for name, config := range configs {

@@ -3,8 +3,10 @@ package antedom
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -284,6 +286,57 @@ func (w *ArtifactWriter) Write(name string, data []byte) error {
 	}
 	_, err := w.files[name].file.Write(data)
 	return err
+}
+
+// ValidateXML checks the complete temporary artifact as one well-formed XML
+// document before publication.
+func (w *ArtifactWriter) ValidateXML(name string) error {
+	name, err := cleanArtifactPath(name)
+	if err != nil {
+		return err
+	}
+	artifact, ok := w.files[name]
+	if !ok || artifact.file == nil {
+		return fmt.Errorf("artifact %q is not open", name)
+	}
+	input, err := os.Open(artifact.tempPath)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	decoder := xml.NewDecoder(input)
+	decoder.Strict = true
+	depth, roots := 0, 0
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+		switch token := token.(type) {
+		case xml.StartElement:
+			if depth == 0 {
+				roots++
+				if roots > 1 {
+					return fmt.Errorf("XML document has multiple root elements")
+				}
+			}
+			depth++
+		case xml.EndElement:
+			depth--
+		case xml.CharData:
+			if depth == 0 && strings.TrimSpace(string(token)) != "" {
+				return fmt.Errorf("XML document has text outside its root element")
+			}
+		}
+	}
+	if roots != 1 {
+		return fmt.Errorf("XML document must have exactly one root element")
+	}
+	return nil
 }
 
 func (w *ArtifactWriter) Commit(ctx context.Context) error {
