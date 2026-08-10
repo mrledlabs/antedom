@@ -4,7 +4,8 @@
 // layout/ (layout templates named by ante:layout),
 // and data/ (*.json files, in scope as data.<name>).
 // "antedom build" renders the site to a directory and exits;
-// "antedom serve" serves the site over HTTP, rendering per request.
+// "antedom serve" serves the site over HTTP, rendering per request,
+// and is intended for production serving as well as development.
 package main
 
 import (
@@ -49,7 +50,9 @@ func main() {
 	serveCmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the site over HTTP, rendering per request",
-		Args:  cobra.NoArgs,
+		Long: "Serve the site over HTTP, rendering each page per request.\n" +
+			"Intended for production serving as well as development.",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			op := antedom.NewProject(siteDir).Operation(cmd.Context(), antedom.OperationServe)
 			handler := http.Handler(op.Handler())
@@ -61,6 +64,7 @@ func main() {
 		},
 	}
 	serveCmd.Flags().StringVar(&listen, "listen", "127.0.0.1:26833", "listen address")
+	// Reload defaults on for now; reconsider once serve sees production use.
 	serveCmd.Flags().BoolVar(&reload, "reload", true, "reload browsers when site files change")
 
 	var layout string

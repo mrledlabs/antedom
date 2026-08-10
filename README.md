@@ -13,6 +13,9 @@ go test ./...
 
 (Port 28633 is the default, it is ANTED on a phone keypad.)
 
+`serve` is intended for production serving as well as development: it
+renders pages per request rather than acting only as a preview server.
+
 ## Development
 
 For a serve loop that also restarts on Go source changes, install

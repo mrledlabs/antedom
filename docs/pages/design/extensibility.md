@@ -88,7 +88,9 @@ antedom never ships project extensions.
   Class-based output with per-color-scheme palettes would need generated
   stylesheets and is deferred.
 
-- Serve runs the same `page:document` hooks as build. A rendered request
+- Serve is intended for production serving, not only development; serve
+  features are designed to production semantics, not dev-server shortcuts.
+  It runs the same `page:document` hooks as build. A rendered request
   loads `antedom.js` afresh — matching serve's existing per-request page
   discovery — so extension edits take effect immediately, and every request
   gets its own goroutine-confined Sobek runtime (runtimes are not
