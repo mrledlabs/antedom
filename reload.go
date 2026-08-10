@@ -2,12 +2,8 @@ package antedom
 
 import (
 	"bytes"
-	"hash/fnv"
 	"io"
-	"io/fs"
 	"net/http"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -58,7 +54,7 @@ func serveReload(w http.ResponseWriter, r *http.Request, dirs []string) {
 	w.Header().Set("Cache-Control", "no-cache")
 	io.WriteString(w, ": watching\n\n")
 	fl.Flush()
-	last := fingerprint(dirs)
+	last := fingerprint(dirs...)
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -66,39 +62,13 @@ func serveReload(w http.ResponseWriter, r *http.Request, dirs []string) {
 		case <-r.Context().Done():
 			return
 		case <-tick.C:
-			if fp := fingerprint(dirs); fp != last {
+			if fp := fingerprint(dirs...); fp != last {
 				last = fp
 				io.WriteString(w, "data: reload\n\n")
 				fl.Flush()
 			}
 		}
 	}
-}
-
-// fingerprint hashes every file's path, size, and mtime under dirs.
-// Walk errors are skipped: editors rename and remove files mid-save,
-// and the next poll sees the settled state.
-func fingerprint(dirs []string) uint64 {
-	h := fnv.New64a()
-	for _, dir := range dirs {
-		filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			info, err := d.Info()
-			if err != nil {
-				return nil
-			}
-			io.WriteString(h, p)
-			h.Write([]byte{0})
-			io.WriteString(h, info.ModTime().String())
-			h.Write([]byte{0})
-			io.WriteString(h, strconv.FormatInt(info.Size(), 10))
-			h.Write([]byte{0})
-			return nil
-		})
-	}
-	return h.Sum64()
 }
 
 // responseBuffer captures a response so LiveReload can append to HTML
