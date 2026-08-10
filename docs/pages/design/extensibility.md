@@ -110,8 +110,10 @@ antedom never ships project extensions.
   `data.now`, for example, is frozen in a cached artifact while live in
   pages — and a test asserts served artifacts are byte-identical to a
   full build's. One rebuild runs at a time; concurrent artifact requests
-  wait for it and share its result. A custom `Project.Data` source is
-  invisible to the fingerprint.
+  wait for it and share its result, and the cache warms in the background
+  at serve startup so the first artifact request does not pay for the
+  first full render. A custom `Project.Data` source is invisible to the
+  fingerprint.
 
 - Builds always write the normal HTML tree and may fan each ephemeral
   `RenderedPage` out synchronously to additional outputs. JavaScript outputs
@@ -140,12 +142,11 @@ do not become feed content. Complete-page text extraction remains intentionally
 basic concatenated rendered text; a search implementation may reveal that it
 needs configurable exclusion rules beyond the authored-content boundary.
 
-Generated aggregate outputs currently run during `build`, not `serve`.
-Production serve support for files such as `sitemap.xml` and `feed.xml` needs a
-cache/invalidation design: regenerating every page on every aggregate-output
-request would be correct but too expensive for large sites. Until that lands,
-these generators are complete static-build outputs but are not routes provided
-by Antedom's production server.
+Generated aggregate outputs now run during `serve` as well as `build`: serve
+routes files such as `sitemap.xml` and `feed.xml` to a fingerprint-invalidated
+artifact cache (see the serve bullet above). The cache directory is a
+per-process temporary directory; a persistent location is deferred until a
+deployment needs it.
 
 ## Project configuration
 

@@ -202,6 +202,30 @@ more
 	}
 }
 
+func TestArtifactCacheWarm(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, artifactExtension)
+
+	cache := &artifactCache{op: NewProject(root).Operation(context.Background(), OperationServe)}
+	cache.warm()
+	if !cache.valid {
+		t.Fatal("warm did not build the cache")
+	}
+	for _, artifact := range []string{"sitemap.xml", "manifest.json"} {
+		if _, err := os.Stat(filepath.Join(cache.dir, artifact)); err != nil {
+			t.Errorf("warm did not produce %s: %v", artifact, err)
+		}
+	}
+
+	// Warming a project without an extension builds nothing and does not fail.
+	bare := &artifactCache{op: NewProject(t.TempDir()).Operation(context.Background(), OperationServe)}
+	bare.warm()
+	if entries, err := os.ReadDir(bare.dir); err != nil || len(entries) != 0 {
+		t.Errorf("bare warm cache = (%v, %v), want empty", entries, err)
+	}
+}
+
 func TestServeArtifactsWithoutExtension(t *testing.T) {
 	root := t.TempDir()
 	writeCodeSite(t, root)

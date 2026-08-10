@@ -155,6 +155,7 @@ func (o *Operation) Handler() http.Handler {
 		PageDocument: o.servePageDocument,
 	})
 	artifacts := &artifactCache{op: o}
+	go artifacts.warm()
 	ctx := o.operationContext()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
@@ -232,18 +233,36 @@ func (c *artifactCache) serve(w http.ResponseWriter, r *http.Request, rel string
 	http.ServeContent(w, r, path.Base(rel), info.ModTime(), f)
 }
 
+// warm builds the artifacts once at serve startup so the first artifact
+// request does not pay for the first full render. Errors are dropped here:
+// valid stays false, and the next artifact request rebuilds and reports them.
+func (c *artifactCache) warm() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_ = c.refreshLocked()
+}
+
 // refresh rebuilds the cached artifacts if the site changed since the last
-// build and returns rel's on-disk path. The fingerprint is taken before
-// building so edits landing mid-build invalidate the result instead of going
-// unseen. It covers the conventional project inputs; a custom Project.Data
-// source is invisible to it.
+// build and returns rel's on-disk path.
 func (c *artifactCache) refresh(rel string) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if err := c.refreshLocked(); err != nil {
+		return "", err
+	}
+	return filepath.Join(c.dir, filepath.FromSlash(rel)), nil
+}
+
+// refreshLocked, called with mu held, rebuilds into the cache directory when
+// the site changed since the last build. The fingerprint is taken before
+// building so edits landing mid-build invalidate the result instead of going
+// unseen. It covers the conventional project inputs; a custom Project.Data
+// source is invisible to it.
+func (c *artifactCache) refreshLocked() error {
 	if c.dir == "" {
 		dir, err := os.MkdirTemp("", "antedom-artifacts-")
 		if err != nil {
-			return "", err
+			return err
 		}
 		c.dir = dir
 	}
@@ -256,11 +275,11 @@ func (c *artifactCache) refresh(rel string) (string, error) {
 	)
 	if !c.valid || fp != c.fp {
 		if _, err := c.op.buildArtifacts(c.dir); err != nil {
-			return "", err
+			return err
 		}
 		c.fp, c.valid = fp, true
 	}
-	return filepath.Join(c.dir, filepath.FromSlash(rel)), nil
+	return nil
 }
 
 // servePageDocument loads the project extension for one request's render.
