@@ -1,0 +1,330 @@
+host: Naragua
+kernel: Darwin 25.6.0
+power: AC
+commit: 4c19faf
+commit-date: 2026-08-10T07:20:51-05:00
+date: 2026-08-10T09:22:21-05:00
+go-version: go1.26.5
+gomaxprocs: 14
+numcpu: 14
+benchtime: 1x
+count: 10
+dep-sobek: v0.0.0-20260727154728-7781506a890f
+dep-goldmark: v1.8.5
+dep-x-net: v0.57.0
+goos: darwin
+goarch: arm64
+pkg: github.com/mrled/antedom
+cpu: Apple M4 Pro
+BenchmarkBuildBlog/10-14          	       1	   3708709 ns/op	      2966 pages/s	         0.003709 wall-s	  930744 B/op	    9621 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2481584 ns/op	      4433 pages/s	         0.002482 wall-s	  897808 B/op	    9312 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2654959 ns/op	      4143 pages/s	         0.002655 wall-s	  934736 B/op	    9317 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2380708 ns/op	      4620 pages/s	         0.002381 wall-s	  934912 B/op	    9317 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2459792 ns/op	      4472 pages/s	         0.002460 wall-s	  934912 B/op	    9317 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   3041875 ns/op	      3616 pages/s	         0.003042 wall-s	  935008 B/op	    9319 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2474417 ns/op	      4445 pages/s	         0.002474 wall-s	  897808 B/op	    9312 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2283541 ns/op	      4817 pages/s	         0.002284 wall-s	  934912 B/op	    9317 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2217916 ns/op	      4960 pages/s	         0.002218 wall-s	  934960 B/op	    9318 allocs/op
+BenchmarkBuildBlog/10-14          	       1	   2432458 ns/op	      4522 pages/s	         0.002432 wall-s	  934912 B/op	    9317 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  22038917 ns/op	      4583 pages/s	         0.02204 wall-s	 8158608 B/op	   80115 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21069125 ns/op	      4794 pages/s	         0.02107 wall-s	 8153256 B/op	   80106 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20459542 ns/op	      4937 pages/s	         0.02046 wall-s	 8153208 B/op	   80106 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20092000 ns/op	      5027 pages/s	         0.02009 wall-s	 8153416 B/op	   80107 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  20452042 ns/op	      4938 pages/s	         0.02045 wall-s	 8116088 B/op	   80100 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  26141584 ns/op	      3864 pages/s	         0.02614 wall-s	 8116200 B/op	   80102 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  50048958 ns/op	      2018 pages/s	         0.05005 wall-s	 8153208 B/op	   80107 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  22057709 ns/op	      4579 pages/s	         0.02206 wall-s	 8192368 B/op	   80112 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21366541 ns/op	      4727 pages/s	         0.02137 wall-s	 8190504 B/op	   80112 allocs/op
+BenchmarkBuildBlog/100-14         	       1	  21483458 ns/op	      4701 pages/s	         0.02148 wall-s	 8155296 B/op	   80107 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 349872916 ns/op	      2861 pages/s	         0.3499 wall-s	80019376 B/op	  791011 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 340326458 ns/op	      2941 pages/s	         0.3403 wall-s	80080728 B/op	  791006 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 358706875 ns/op	      2791 pages/s	         0.3587 wall-s	79865768 B/op	  790984 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 349303416 ns/op	      2866 pages/s	         0.3493 wall-s	80080808 B/op	  791005 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 331477041 ns/op	      3020 pages/s	         0.3315 wall-s	79895992 B/op	  790987 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 220992292 ns/op	      4530 pages/s	         0.2210 wall-s	80381832 B/op	  791052 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 358908667 ns/op	      2789 pages/s	         0.3589 wall-s	80306064 B/op	  791042 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 348136791 ns/op	      2875 pages/s	         0.3481 wall-s	80156976 B/op	  791017 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 341299125 ns/op	      2933 pages/s	         0.3413 wall-s	80198128 B/op	  791025 allocs/op
+BenchmarkBuildBlog/1000-14        	       1	 320792125 ns/op	      3120 pages/s	         0.3208 wall-s	80377752 B/op	  791045 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2917457333 ns/op	      3428 pages/s	         2.917 wall-s	795729496 B/op	 7901746 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2863570291 ns/op	      3492 pages/s	         2.864 wall-s	795289712 B/op	 7901694 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2914190458 ns/op	      3432 pages/s	         2.914 wall-s	796139808 B/op	 7901805 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2915123959 ns/op	      3431 pages/s	         2.915 wall-s	795580904 B/op	 7901725 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2883641708 ns/op	      3468 pages/s	         2.884 wall-s	795915848 B/op	 7901779 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2911197792 ns/op	      3435 pages/s	         2.911 wall-s	795494224 B/op	 7901744 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2863577625 ns/op	      3492 pages/s	         2.864 wall-s	795432648 B/op	 7901707 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	2883248542 ns/op	      3469 pages/s	         2.883 wall-s	796437232 B/op	 7901847 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	3051583583 ns/op	      3277 pages/s	         3.052 wall-s	795951896 B/op	 7901774 allocs/op
+BenchmarkBuildBlog/10000-14       	       1	3110650666 ns/op	      3215 pages/s	         3.111 wall-s	796174696 B/op	 7901806 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  39189708 ns/op	      2577 pages/s	       388.0 us/page	         0.03919 wall-s	 8212664 B/op	   81437 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  30214541 ns/op	      3343 pages/s	       299.1 us/page	         0.03021 wall-s	 8249296 B/op	   81381 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  27880292 ns/op	      3623 pages/s	       276.0 us/page	         0.02788 wall-s	 8208008 B/op	   81372 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  28012000 ns/op	      3606 pages/s	       277.3 us/page	         0.02801 wall-s	 8208152 B/op	   81373 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  26545500 ns/op	      3805 pages/s	       262.8 us/page	         0.02655 wall-s	 8245144 B/op	   81377 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	 136000750 ns/op	       742.6 pages/s	      1347 us/page	         0.1360 wall-s	 8287584 B/op	   81398 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  27946167 ns/op	      3614 pages/s	       276.7 us/page	         0.02795 wall-s	 8245160 B/op	   81377 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  27470833 ns/op	      3677 pages/s	       272.0 us/page	         0.02747 wall-s	 8207400 B/op	   81366 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  27952167 ns/op	      3613 pages/s	       276.8 us/page	         0.02795 wall-s	 8287008 B/op	   81392 allocs/op
+BenchmarkBuildBlogExtension/100/manifest-14         	       1	  27947833 ns/op	      3614 pages/s	       276.7 us/page	         0.02795 wall-s	 8327000 B/op	   81408 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  28909167 ns/op	      3494 pages/s	       286.2 us/page	         0.02891 wall-s	 8713512 B/op	   89888 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  28209833 ns/op	      3580 pages/s	       279.3 us/page	         0.02821 wall-s	 8709696 B/op	   89885 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  27149208 ns/op	      3720 pages/s	       268.8 us/page	         0.02715 wall-s	 8674176 B/op	   89879 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  84524000 ns/op	      1195 pages/s	       836.9 us/page	         0.08452 wall-s	 8674024 B/op	   89878 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  29801792 ns/op	      3389 pages/s	       295.1 us/page	         0.02980 wall-s	 8708952 B/op	   89879 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  30081125 ns/op	      3358 pages/s	       297.8 us/page	         0.03008 wall-s	 8744632 B/op	   89887 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  31693959 ns/op	      3187 pages/s	       313.8 us/page	         0.03169 wall-s	 8708984 B/op	   89879 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  29469958 ns/op	      3427 pages/s	       291.8 us/page	         0.02947 wall-s	 8746120 B/op	   89884 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  28183417 ns/op	      3584 pages/s	       279.0 us/page	         0.02818 wall-s	 8748352 B/op	   89889 allocs/op
+BenchmarkBuildBlogExtension/100/generated-manifest-14         	       1	  29459625 ns/op	      3428 pages/s	       291.7 us/page	         0.02946 wall-s	 8746832 B/op	   89890 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  48897583 ns/op	      2066 pages/s	       484.1 us/page	         0.04890 wall-s	 8603456 B/op	   86572 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  28238334 ns/op	      3577 pages/s	       279.6 us/page	         0.02824 wall-s	 8677744 B/op	   86583 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  27757000 ns/op	      3639 pages/s	       274.8 us/page	         0.02776 wall-s	 8560064 B/op	   86568 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  27938500 ns/op	      3615 pages/s	       276.6 us/page	         0.02794 wall-s	 8563264 B/op	   86568 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  27980959 ns/op	      3610 pages/s	       277.0 us/page	         0.02798 wall-s	 8563152 B/op	   86567 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  26335750 ns/op	      3835 pages/s	       260.7 us/page	         0.02634 wall-s	 8603456 B/op	   86572 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  33270500 ns/op	      3036 pages/s	       329.4 us/page	         0.03327 wall-s	 8603456 B/op	   86572 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  29843416 ns/op	      3384 pages/s	       295.5 us/page	         0.02984 wall-s	 8566400 B/op	   86567 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  28019875 ns/op	      3605 pages/s	       277.4 us/page	         0.02802 wall-s	 8640576 B/op	   86577 allocs/op
+BenchmarkBuildBlogExtension/100/xml-sitemap-14                	       1	  29209792 ns/op	      3458 pages/s	       289.2 us/page	         0.02921 wall-s	 8528352 B/op	   86567 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  29135167 ns/op	      3467 pages/s	       288.5 us/page	         0.02914 wall-s	 8315304 B/op	   83828 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  39938666 ns/op	      2529 pages/s	       395.4 us/page	         0.03994 wall-s	 8426536 B/op	   83842 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28623167 ns/op	      3529 pages/s	       283.4 us/page	         0.02862 wall-s	 8354376 B/op	   83833 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28718708 ns/op	      3517 pages/s	       284.3 us/page	         0.02872 wall-s	 8391736 B/op	   83841 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28034791 ns/op	      3603 pages/s	       277.6 us/page	         0.02803 wall-s	 8315224 B/op	   83826 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28059250 ns/op	      3600 pages/s	       277.8 us/page	         0.02806 wall-s	 8389400 B/op	   83836 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28916583 ns/op	      3493 pages/s	       286.3 us/page	         0.02892 wall-s	 8426520 B/op	   83841 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  34854959 ns/op	      2898 pages/s	       345.1 us/page	         0.03485 wall-s	 8428856 B/op	   83846 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28549209 ns/op	      3538 pages/s	       282.7 us/page	         0.02855 wall-s	 8463800 B/op	   83848 allocs/op
+BenchmarkBuildBlogExtension/100/raw-xml-sitemap-14            	       1	  28518250 ns/op	      3542 pages/s	       282.4 us/page	         0.02852 wall-s	 8389416 B/op	   83836 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  23258917 ns/op	      4342 pages/s	       230.3 us/page	         0.02326 wall-s	 8194384 B/op	   80253 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  22488458 ns/op	      4491 pages/s	       222.7 us/page	         0.02249 wall-s	 8194416 B/op	   80253 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  21841750 ns/op	      4624 pages/s	       216.2 us/page	         0.02184 wall-s	 8155224 B/op	   80246 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  30562083 ns/op	      3305 pages/s	       302.6 us/page	         0.03056 wall-s	 8155224 B/op	   80246 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  23090333 ns/op	      4374 pages/s	       228.6 us/page	         0.02309 wall-s	 8194400 B/op	   80253 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  23049583 ns/op	      4382 pages/s	       228.2 us/page	         0.02305 wall-s	 8268720 B/op	   80264 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  22696583 ns/op	      4450 pages/s	       224.7 us/page	         0.02270 wall-s	 8231552 B/op	   80258 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  22552167 ns/op	      4479 pages/s	       223.3 us/page	         0.02255 wall-s	 8194432 B/op	   80253 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  22511000 ns/op	      4487 pages/s	       222.9 us/page	         0.02251 wall-s	 8194400 B/op	   80253 allocs/op
+BenchmarkBuildBlogExtension/100/minimal-14                    	       1	  23562834 ns/op	      4286 pages/s	       233.3 us/page	         0.02356 wall-s	 8229432 B/op	   80256 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  56460375 ns/op	      1789 pages/s	       559.0 us/page	         0.05646 wall-s	 8538776 B/op	   84853 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  22796292 ns/op	      4431 pages/s	       225.7 us/page	         0.02280 wall-s	 8575864 B/op	   84858 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  23539041 ns/op	      4291 pages/s	       233.1 us/page	         0.02354 wall-s	 8464568 B/op	   84843 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  22552875 ns/op	      4478 pages/s	       223.3 us/page	         0.02255 wall-s	 8501688 B/op	   84848 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  22574166 ns/op	      4474 pages/s	       223.5 us/page	         0.02257 wall-s	 8538776 B/op	   84853 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  22620333 ns/op	      4465 pages/s	       224.0 us/page	         0.02262 wall-s	 8537128 B/op	   84853 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  23127458 ns/op	      4367 pages/s	       229.0 us/page	         0.02313 wall-s	 8538760 B/op	   84853 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  27891500 ns/op	      3621 pages/s	       276.1 us/page	         0.02789 wall-s	 8464568 B/op	   84843 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  25254291 ns/op	      3999 pages/s	       250.0 us/page	         0.02525 wall-s	 8501672 B/op	   84848 allocs/op
+BenchmarkBuildBlogExtension/100/noop-hook-14                  	       1	  22388291 ns/op	      4511 pages/s	       221.7 us/page	         0.02239 wall-s	 8501784 B/op	   84849 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 361021292 ns/op	      2773 pages/s	       360.7 us/page	         0.3610 wall-s	85436536 B/op	  881830 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 372896584 ns/op	      2684 pages/s	       372.5 us/page	         0.3729 wall-s	85394600 B/op	  881814 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 353981833 ns/op	      2828 pages/s	       353.6 us/page	         0.3540 wall-s	85509992 B/op	  881833 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 248151916 ns/op	      4034 pages/s	       247.9 us/page	         0.2482 wall-s	85771920 B/op	  881870 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 357840208 ns/op	      2797 pages/s	       357.5 us/page	         0.3578 wall-s	85396472 B/op	  881815 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 317238791 ns/op	      3155 pages/s	       316.9 us/page	         0.3172 wall-s	85693616 B/op	  881855 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 379938542 ns/op	      2635 pages/s	       379.6 us/page	         0.3799 wall-s	85547152 B/op	  881836 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 363230000 ns/op	      2756 pages/s	       362.9 us/page	         0.3632 wall-s	85434080 B/op	  881824 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 247842500 ns/op	      4039 pages/s	       247.6 us/page	         0.2478 wall-s	85660560 B/op	  881855 allocs/op
+BenchmarkBuildBlogExtension/1000/generated-manifest-14        	       1	 368571500 ns/op	      2716 pages/s	       368.2 us/page	         0.3686 wall-s	85394776 B/op	  881814 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 336893250 ns/op	      2971 pages/s	       336.6 us/page	         0.3369 wall-s	84150368 B/op	  848838 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 356388042 ns/op	      2809 pages/s	       356.0 us/page	         0.3564 wall-s	84156224 B/op	  848840 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 334990833 ns/op	      2988 pages/s	       334.7 us/page	         0.3350 wall-s	83851440 B/op	  848796 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 241017584 ns/op	      4153 pages/s	       240.8 us/page	         0.2410 wall-s	84078496 B/op	  848832 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 397214000 ns/op	      2520 pages/s	       396.8 us/page	         0.3972 wall-s	84008336 B/op	  848824 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 233665250 ns/op	      4284 pages/s	       233.4 us/page	         0.2337 wall-s	83929680 B/op	  848808 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 365271500 ns/op	      2740 pages/s	       364.9 us/page	         0.3653 wall-s	83964824 B/op	  848813 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 373927709 ns/op	      2677 pages/s	       373.6 us/page	         0.3739 wall-s	84039168 B/op	  848823 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 333268459 ns/op	      3004 pages/s	       332.9 us/page	         0.3333 wall-s	83967120 B/op	  848817 allocs/op
+BenchmarkBuildBlogExtension/1000/xml-sitemap-14               	       1	 241981125 ns/op	      4137 pages/s	       241.7 us/page	         0.2420 wall-s	84226640 B/op	  848850 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 372666292 ns/op	      2686 pages/s	       372.3 us/page	         0.3727 wall-s	82303592 B/op	  822683 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 342162458 ns/op	      2926 pages/s	       341.8 us/page	         0.3422 wall-s	82159592 B/op	  822671 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 259975375 ns/op	      3850 pages/s	       259.7 us/page	         0.2600 wall-s	82153056 B/op	  822661 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 367546709 ns/op	      2723 pages/s	       367.2 us/page	         0.3675 wall-s	82155440 B/op	  822666 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 370652083 ns/op	      2701 pages/s	       370.3 us/page	         0.3707 wall-s	82155112 B/op	  822662 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 344297833 ns/op	      2907 pages/s	       344.0 us/page	         0.3443 wall-s	82229872 B/op	  822678 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 238187083 ns/op	      4203 pages/s	       237.9 us/page	         0.2382 wall-s	82340688 B/op	  822689 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 385247541 ns/op	      2598 pages/s	       384.9 us/page	         0.3852 wall-s	82307688 B/op	  822688 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 349814667 ns/op	      2862 pages/s	       349.5 us/page	         0.3498 wall-s	82270496 B/op	  822682 allocs/op
+BenchmarkBuildBlogExtension/1000/raw-xml-sitemap-14           	       1	 240631709 ns/op	      4160 pages/s	       240.4 us/page	         0.2406 wall-s	82233672 B/op	  822679 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 277054958 ns/op	      3613 pages/s	       276.8 us/page	         0.2771 wall-s	80686320 B/op	  791198 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 215088708 ns/op	      4654 pages/s	       214.9 us/page	         0.2151 wall-s	80312920 B/op	  791144 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 347093625 ns/op	      2884 pages/s	       346.7 us/page	         0.3471 wall-s	80575024 B/op	  791183 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 350306500 ns/op	      2857 pages/s	       350.0 us/page	         0.3503 wall-s	80465592 B/op	  791169 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 335565500 ns/op	      2983 pages/s	       335.2 us/page	         0.3356 wall-s	80836856 B/op	  791221 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 358426333 ns/op	      2793 pages/s	       358.1 us/page	         0.3584 wall-s	80723344 B/op	  791203 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 345737083 ns/op	      2895 pages/s	       345.4 us/page	         0.3457 wall-s	80836440 B/op	  791214 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 360295500 ns/op	      2778 pages/s	       359.9 us/page	         0.3603 wall-s	80723296 B/op	  791202 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 305122834 ns/op	      3281 pages/s	       304.8 us/page	         0.3051 wall-s	80609880 B/op	  791183 allocs/op
+BenchmarkBuildBlogExtension/1000/minimal-14                   	       1	 380904209 ns/op	      2628 pages/s	       380.5 us/page	         0.3809 wall-s	80721512 B/op	  791201 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 222267250 ns/op	      4504 pages/s	       222.0 us/page	         0.2223 wall-s	83477784 B/op	  836259 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 221640416 ns/op	      4516 pages/s	       221.4 us/page	         0.2216 wall-s	83336928 B/op	  836251 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 370380708 ns/op	      2703 pages/s	       370.0 us/page	         0.3704 wall-s	83409000 B/op	  836258 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 347132542 ns/op	      2884 pages/s	       346.8 us/page	         0.3471 wall-s	83596432 B/op	  836285 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 334399250 ns/op	      2993 pages/s	       334.1 us/page	         0.3344 wall-s	83667944 B/op	  836294 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 305694541 ns/op	      3275 pages/s	       305.4 us/page	         0.3057 wall-s	83635864 B/op	  836294 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 328535417 ns/op	      3047 pages/s	       328.2 us/page	         0.3285 wall-s	83559472 B/op	  836279 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 314042792 ns/op	      3187 pages/s	       313.7 us/page	         0.3140 wall-s	83334920 B/op	  836249 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 342861875 ns/op	      2920 pages/s	       342.5 us/page	         0.3429 wall-s	83552344 B/op	  836273 allocs/op
+BenchmarkBuildBlogExtension/1000/noop-hook-14                 	       1	 225426459 ns/op	      4440 pages/s	       225.2 us/page	         0.2254 wall-s	83927688 B/op	  836329 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 233526500 ns/op	      4286 pages/s	       233.3 us/page	         0.2335 wall-s	81126328 B/op	  801489 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 364535500 ns/op	      2746 pages/s	       364.2 us/page	         0.3645 wall-s	81011536 B/op	  801455 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 369817792 ns/op	      2707 pages/s	       369.4 us/page	         0.3698 wall-s	80976192 B/op	  801470 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 238372292 ns/op	      4199 pages/s	       238.1 us/page	         0.2384 wall-s	81010464 B/op	  801448 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 366700750 ns/op	      2730 pages/s	       366.3 us/page	         0.3667 wall-s	80939720 B/op	  801454 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 351490875 ns/op	      2848 pages/s	       351.1 us/page	         0.3515 wall-s	81115088 B/op	  801518 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 364594417 ns/op	      2746 pages/s	       364.2 us/page	         0.3646 wall-s	80752416 B/op	  801448 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 333704458 ns/op	      3000 pages/s	       333.4 us/page	         0.3337 wall-s	81164496 B/op	  801523 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 343662750 ns/op	      2913 pages/s	       343.3 us/page	         0.3437 wall-s	81347920 B/op	  801509 allocs/op
+BenchmarkBuildBlogExtension/1000/manifest-14                  	       1	 283863708 ns/op	      3526 pages/s	       283.6 us/page	         0.2839 wall-s	81171304 B/op	  801517 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2964180000 ns/op	      3374 pages/s	       296.4 us/page	         2.964 wall-s	798600296 B/op	 7901998 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	3013268792 ns/op	      3319 pages/s	       301.3 us/page	         3.013 wall-s	798152408 B/op	 7901868 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2990401792 ns/op	      3344 pages/s	       299.0 us/page	         2.990 wall-s	798285176 B/op	 7901905 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2979242250 ns/op	      3357 pages/s	       297.9 us/page	         2.979 wall-s	799194216 B/op	 7902018 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	3010814875 ns/op	      3322 pages/s	       301.1 us/page	         3.011 wall-s	798194304 B/op	 7901884 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2963247042 ns/op	      3375 pages/s	       296.3 us/page	         2.963 wall-s	798657904 B/op	 7901952 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2910354834 ns/op	      3436 pages/s	       291.0 us/page	         2.910 wall-s	798377240 B/op	 7901902 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2982492250 ns/op	      3353 pages/s	       298.2 us/page	         2.982 wall-s	798328608 B/op	 7901919 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2891750917 ns/op	      3458 pages/s	       289.1 us/page	         2.892 wall-s	798486712 B/op	 7901918 allocs/op
+BenchmarkBuildBlogExtension/10000/minimal-14                  	       1	2991192375 ns/op	      3343 pages/s	       299.1 us/page	         2.991 wall-s	798519544 B/op	 7901915 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2983920292 ns/op	      3352 pages/s	       298.4 us/page	         2.984 wall-s	828809688 B/op	 8352029 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2920587125 ns/op	      3424 pages/s	       292.0 us/page	         2.921 wall-s	829183896 B/op	 8352072 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	3010503416 ns/op	      3322 pages/s	       301.0 us/page	         3.011 wall-s	828104168 B/op	 8351927 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2980859583 ns/op	      3355 pages/s	       298.1 us/page	         2.981 wall-s	828546912 B/op	 8351984 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2974535666 ns/op	      3362 pages/s	       297.4 us/page	         2.975 wall-s	828628152 B/op	 8352005 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2994711250 ns/op	      3340 pages/s	       299.4 us/page	         2.995 wall-s	828621632 B/op	 8351994 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2955763292 ns/op	      3384 pages/s	       295.5 us/page	         2.956 wall-s	828658336 B/op	 8351998 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2981897666 ns/op	      3354 pages/s	       298.2 us/page	         2.982 wall-s	828437688 B/op	 8351969 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2965139791 ns/op	      3373 pages/s	       296.5 us/page	         2.965 wall-s	828881008 B/op	 8352028 allocs/op
+BenchmarkBuildBlogExtension/10000/noop-hook-14                	       1	2980575958 ns/op	      3355 pages/s	       298.0 us/page	         2.981 wall-s	827153448 B/op	 8351843 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	2992453458 ns/op	      3342 pages/s	       299.2 us/page	         2.992 wall-s	801999768 B/op	 8002526 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3004904959 ns/op	      3328 pages/s	       300.5 us/page	         3.005 wall-s	802376352 B/op	 8002629 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3049985875 ns/op	      3279 pages/s	       305.0 us/page	         3.050 wall-s	802112104 B/op	 8002553 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	2987299709 ns/op	      3348 pages/s	       298.7 us/page	         2.987 wall-s	801360608 B/op	 8002358 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3073340334 ns/op	      3254 pages/s	       307.3 us/page	         3.073 wall-s	801849552 B/op	 8002523 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3044396041 ns/op	      3285 pages/s	       304.4 us/page	         3.044 wall-s	802381800 B/op	 8002629 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3095777750 ns/op	      3231 pages/s	       309.5 us/page	         3.096 wall-s	801819336 B/op	 8002496 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3062457875 ns/op	      3266 pages/s	       306.2 us/page	         3.062 wall-s	802610456 B/op	 8002737 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3043664542 ns/op	      3286 pages/s	       304.3 us/page	         3.044 wall-s	801947960 B/op	 8002609 allocs/op
+BenchmarkBuildBlogExtension/10000/manifest-14                 	       1	3000701708 ns/op	      3333 pages/s	       300.0 us/page	         3.001 wall-s	803035328 B/op	 8002829 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3113962875 ns/op	      3212 pages/s	       311.4 us/page	         3.114 wall-s	846607552 B/op	 8802595 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3091162250 ns/op	      3235 pages/s	       309.1 us/page	         3.091 wall-s	846333304 B/op	 8802569 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3008799250 ns/op	      3324 pages/s	       300.8 us/page	         3.009 wall-s	846236344 B/op	 8802543 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3090977166 ns/op	      3236 pages/s	       309.1 us/page	         3.091 wall-s	846718224 B/op	 8802602 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3063241125 ns/op	      3265 pages/s	       306.3 us/page	         3.063 wall-s	846643992 B/op	 8802594 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3042397625 ns/op	      3287 pages/s	       304.2 us/page	         3.042 wall-s	846384424 B/op	 8802559 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3093962750 ns/op	      3232 pages/s	       309.4 us/page	         3.094 wall-s	846978400 B/op	 8802642 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3096573916 ns/op	      3230 pages/s	       309.6 us/page	         3.097 wall-s	846185976 B/op	 8802559 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3094174625 ns/op	      3232 pages/s	       309.4 us/page	         3.094 wall-s	846296424 B/op	 8802567 allocs/op
+BenchmarkBuildBlogExtension/10000/generated-manifest-14       	       1	3086539375 ns/op	      3240 pages/s	       308.6 us/page	         3.087 wall-s	846530984 B/op	 8802580 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3003297250 ns/op	      3330 pages/s	       300.3 us/page	         3.003 wall-s	831538112 B/op	 8472580 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3015289709 ns/op	      3317 pages/s	       301.5 us/page	         3.015 wall-s	831051672 B/op	 8472511 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3000615458 ns/op	      3333 pages/s	       300.0 us/page	         3.001 wall-s	832097792 B/op	 8472656 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3048565750 ns/op	      3281 pages/s	       304.8 us/page	         3.049 wall-s	831348048 B/op	 8472545 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3013162500 ns/op	      3319 pages/s	       301.3 us/page	         3.013 wall-s	831795312 B/op	 8472608 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3011293958 ns/op	      3321 pages/s	       301.1 us/page	         3.011 wall-s	831682168 B/op	 8472593 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3011881666 ns/op	      3321 pages/s	       301.2 us/page	         3.012 wall-s	831646896 B/op	 8472588 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3056501791 ns/op	      3272 pages/s	       305.6 us/page	         3.057 wall-s	831125584 B/op	 8472519 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	3018603958 ns/op	      3313 pages/s	       301.8 us/page	         3.019 wall-s	831447712 B/op	 8472583 allocs/op
+BenchmarkBuildBlogExtension/10000/xml-sitemap-14              	       1	2996777625 ns/op	      3337 pages/s	       299.6 us/page	         2.997 wall-s	831981344 B/op	 8472638 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3024036958 ns/op	      3307 pages/s	       302.4 us/page	         3.024 wall-s	814112008 B/op	 8212385 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3046869625 ns/op	      3282 pages/s	       304.7 us/page	         3.047 wall-s	813962152 B/op	 8212370 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3038956791 ns/op	      3291 pages/s	       303.9 us/page	         3.039 wall-s	813702376 B/op	 8212335 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3013979375 ns/op	      3318 pages/s	       301.4 us/page	         3.014 wall-s	814333240 B/op	 8212420 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3055591875 ns/op	      3273 pages/s	       305.5 us/page	         3.056 wall-s	814040536 B/op	 8212386 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	2973806208 ns/op	      3363 pages/s	       297.4 us/page	         2.974 wall-s	814149400 B/op	 8212394 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3038451625 ns/op	      3291 pages/s	       303.8 us/page	         3.038 wall-s	814186360 B/op	 8212399 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3040890917 ns/op	      3289 pages/s	       304.1 us/page	         3.041 wall-s	813592800 B/op	 8212319 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3019324334 ns/op	      3312 pages/s	       301.9 us/page	         3.019 wall-s	813889992 B/op	 8212361 allocs/op
+BenchmarkBuildBlogExtension/10000/raw-xml-sitemap-14          	       1	3121611542 ns/op	      3204 pages/s	       312.1 us/page	         3.122 wall-s	814038088 B/op	 8212379 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22695542 ns/op	      4450 pages/s	       224.7 us/page	         0.02270 wall-s	 8592504 B/op	   87239 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22788959 ns/op	      4432 pages/s	       225.6 us/page	         0.02279 wall-s	 8591952 B/op	   87234 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	 145023750 ns/op	       696.4 pages/s	      1436 us/page	         0.1450 wall-s	 8666728 B/op	   87251 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22744959 ns/op	      4441 pages/s	       225.2 us/page	         0.02274 wall-s	 8588504 B/op	   87231 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22562792 ns/op	      4476 pages/s	       223.4 us/page	         0.02256 wall-s	 8629120 B/op	   87239 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22231750 ns/op	      4543 pages/s	       220.1 us/page	         0.02223 wall-s	 8703904 B/op	   87256 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22081917 ns/op	      4574 pages/s	       218.6 us/page	         0.02208 wall-s	 8551128 B/op	   87223 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  23364625 ns/op	      4323 pages/s	       231.3 us/page	         0.02336 wall-s	 8666920 B/op	   87252 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  22280000 ns/op	      4533 pages/s	       220.6 us/page	         0.02228 wall-s	 8629944 B/op	   87249 allocs/op
+BenchmarkBuildBlogHighlight/100/0-blocks-14                   	       1	  21257125 ns/op	      4751 pages/s	       210.5 us/page	         0.02126 wall-s	 8554528 B/op	   87225 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  32496000 ns/op	      3108 pages/s	       321.7 us/page	         0.03250 wall-s	18471680 B/op	  252122 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	 144228584 ns/op	       700.3 pages/s	      1428 us/page	         0.1442 wall-s	18012728 B/op	  247244 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  33427458 ns/op	      3021 pages/s	       331.0 us/page	         0.03343 wall-s	18278160 B/op	  247995 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  32619500 ns/op	      3096 pages/s	       323.0 us/page	         0.03262 wall-s	18567640 B/op	  248360 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  32863459 ns/op	      3073 pages/s	       325.4 us/page	         0.03286 wall-s	18543280 B/op	  248451 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  32874875 ns/op	      3072 pages/s	       325.5 us/page	         0.03287 wall-s	18352112 B/op	  247940 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  32277916 ns/op	      3129 pages/s	       319.6 us/page	         0.03228 wall-s	18142168 B/op	  247587 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  30829583 ns/op	      3276 pages/s	       305.2 us/page	         0.03083 wall-s	18113152 B/op	  247681 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  62763500 ns/op	      1609 pages/s	       621.4 us/page	         0.06276 wall-s	18554152 B/op	  248404 allocs/op
+BenchmarkBuildBlogHighlight/100/1-blocks-14                   	       1	  33695042 ns/op	      2997 pages/s	       333.6 us/page	         0.03370 wall-s	18774896 B/op	  248924 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  43456958 ns/op	      2324 pages/s	       430.3 us/page	         0.04346 wall-s	31731464 B/op	  404048 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  43794000 ns/op	      2306 pages/s	       433.6 us/page	         0.04379 wall-s	31733624 B/op	  404002 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  43938541 ns/op	      2299 pages/s	       435.0 us/page	         0.04394 wall-s	31240688 B/op	  403191 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  46100583 ns/op	      2191 pages/s	       456.4 us/page	         0.04610 wall-s	30954896 B/op	  402653 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  68445625 ns/op	      1476 pages/s	       677.7 us/page	         0.06845 wall-s	31626336 B/op	  403742 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  44024583 ns/op	      2294 pages/s	       435.9 us/page	         0.04402 wall-s	31861680 B/op	  404649 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  43870166 ns/op	      2302 pages/s	       434.4 us/page	         0.04387 wall-s	31827296 B/op	  404532 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  44041083 ns/op	      2293 pages/s	       436.0 us/page	         0.04404 wall-s	31050768 B/op	  402735 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  43094916 ns/op	      2344 pages/s	       426.7 us/page	         0.04309 wall-s	31768720 B/op	  404338 allocs/op
+BenchmarkBuildBlogHighlight/100/3-blocks-14                   	       1	  49517167 ns/op	      2040 pages/s	       490.3 us/page	         0.04952 wall-s	30998640 B/op	  402580 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 227666792 ns/op	      4397 pages/s	       227.4 us/page	         0.2277 wall-s	84786544 B/op	  859564 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 330721208 ns/op	      3027 pages/s	       330.4 us/page	         0.3307 wall-s	84825568 B/op	  859567 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 357611500 ns/op	      2799 pages/s	       357.3 us/page	         0.3576 wall-s	84738432 B/op	  859596 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 349877083 ns/op	      2861 pages/s	       349.5 us/page	         0.3499 wall-s	84721296 B/op	  859568 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 353396208 ns/op	      2833 pages/s	       353.0 us/page	         0.3534 wall-s	84782376 B/op	  859537 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 372119458 ns/op	      2690 pages/s	       371.7 us/page	         0.3721 wall-s	84895936 B/op	  859580 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 321964458 ns/op	      3109 pages/s	       321.6 us/page	         0.3220 wall-s	84905528 B/op	  859604 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 231350750 ns/op	      4327 pages/s	       231.1 us/page	         0.2314 wall-s	84846792 B/op	  859573 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 398081875 ns/op	      2515 pages/s	       397.7 us/page	         0.3981 wall-s	85055136 B/op	  859616 allocs/op
+BenchmarkBuildBlogHighlight/1000/0-blocks-14                  	       1	 334465709 ns/op	      2993 pages/s	       334.1 us/page	         0.3345 wall-s	84887672 B/op	  859571 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 425736541 ns/op	      2351 pages/s	       425.3 us/page	         0.4257 wall-s	174475080 B/op	 2456014 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 453292625 ns/op	      2208 pages/s	       452.8 us/page	         0.4533 wall-s	173057768 B/op	 2453910 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 321205375 ns/op	      3116 pages/s	       320.9 us/page	         0.3212 wall-s	174758064 B/op	 2456371 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 438860166 ns/op	      2281 pages/s	       438.4 us/page	         0.4389 wall-s	172818136 B/op	 2453287 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 448847875 ns/op	      2230 pages/s	       448.4 us/page	         0.4488 wall-s	174249432 B/op	 2455985 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 315996375 ns/op	      3168 pages/s	       315.7 us/page	         0.3160 wall-s	174571408 B/op	 2456211 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 419165208 ns/op	      2388 pages/s	       418.7 us/page	         0.4192 wall-s	173257352 B/op	 2454070 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 462896000 ns/op	      2162 pages/s	       462.4 us/page	         0.4629 wall-s	173824208 B/op	 2454718 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 344956709 ns/op	      2902 pages/s	       344.6 us/page	         0.3450 wall-s	174177888 B/op	 2456304 allocs/op
+BenchmarkBuildBlogHighlight/1000/1-blocks-14                  	       1	 411145000 ns/op	      2435 pages/s	       410.7 us/page	         0.4111 wall-s	173540520 B/op	 2454879 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 521074375 ns/op	      1921 pages/s	       520.6 us/page	         0.5211 wall-s	300275232 B/op	 4005144 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 683703625 ns/op	      1464 pages/s	       683.0 us/page	         0.6837 wall-s	299333568 B/op	 4002304 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 510428084 ns/op	      1961 pages/s	       509.9 us/page	         0.5104 wall-s	299770984 B/op	 4003229 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 507908500 ns/op	      1971 pages/s	       507.4 us/page	         0.5079 wall-s	301062016 B/op	 4007316 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 560825250 ns/op	      1785 pages/s	       560.3 us/page	         0.5608 wall-s	300196280 B/op	 4004532 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 533766083 ns/op	      1875 pages/s	       533.2 us/page	         0.5338 wall-s	301659952 B/op	 4006728 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 468613417 ns/op	      2136 pages/s	       468.1 us/page	         0.4686 wall-s	300363768 B/op	 4004368 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 562108167 ns/op	      1781 pages/s	       561.5 us/page	         0.5621 wall-s	300655952 B/op	 4005410 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 558913083 ns/op	      1791 pages/s	       558.4 us/page	         0.5589 wall-s	300760472 B/op	 4005215 allocs/op
+BenchmarkBuildBlogHighlight/1000/3-blocks-14                  	       1	 552563875 ns/op	      1812 pages/s	       552.0 us/page	         0.5526 wall-s	300822776 B/op	 4006482 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	2925343250 ns/op	      3419 pages/s	       292.5 us/page	         2.925 wall-s	839708864 B/op	 8582747 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	2997038542 ns/op	      3337 pages/s	       299.7 us/page	         2.997 wall-s	839411832 B/op	 8582730 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3313123917 ns/op	      3019 pages/s	       331.3 us/page	         3.313 wall-s	839932200 B/op	 8582791 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	2983856791 ns/op	      3352 pages/s	       298.4 us/page	         2.984 wall-s	839465256 B/op	 8582635 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3046486541 ns/op	      3283 pages/s	       304.6 us/page	         3.046 wall-s	839918280 B/op	 8582739 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3013686625 ns/op	      3319 pages/s	       301.3 us/page	         3.014 wall-s	839922496 B/op	 8582754 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3041696959 ns/op	      3288 pages/s	       304.1 us/page	         3.042 wall-s	840113496 B/op	 8582836 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3000437625 ns/op	      3333 pages/s	       300.0 us/page	         3.000 wall-s	839146648 B/op	 8582651 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3116530375 ns/op	      3209 pages/s	       311.6 us/page	         3.117 wall-s	840216984 B/op	 8582811 allocs/op
+BenchmarkBuildBlogHighlight/10000/0-blocks-14                 	       1	3044347542 ns/op	      3285 pages/s	       304.4 us/page	         3.044 wall-s	840311616 B/op	 8582919 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	3928902834 ns/op	      2545 pages/s	       392.9 us/page	         3.929 wall-s	1648894472 B/op	24413266 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	3998441084 ns/op	      2501 pages/s	       399.8 us/page	         3.998 wall-s	1651744168 B/op	24417096 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4239258667 ns/op	      2359 pages/s	       423.9 us/page	         4.239 wall-s	1649684408 B/op	24414407 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4060990375 ns/op	      2463 pages/s	       406.1 us/page	         4.061 wall-s	1650541768 B/op	24415115 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4037195291 ns/op	      2477 pages/s	       403.7 us/page	         4.037 wall-s	1649423824 B/op	24414828 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4032885833 ns/op	      2480 pages/s	       403.2 us/page	         4.033 wall-s	1650013800 B/op	24415140 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4153168667 ns/op	      2408 pages/s	       415.3 us/page	         4.153 wall-s	1650291408 B/op	24415316 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4079706250 ns/op	      2451 pages/s	       407.9 us/page	         4.080 wall-s	1652492112 B/op	24420448 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	4007520042 ns/op	      2496 pages/s	       400.7 us/page	         4.008 wall-s	1649379136 B/op	24413224 allocs/op
+BenchmarkBuildBlogHighlight/10000/1-blocks-14                 	       1	3942881375 ns/op	      2536 pages/s	       394.2 us/page	         3.943 wall-s	1651310648 B/op	24415960 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	4998447541 ns/op	      2001 pages/s	       499.8 us/page	         4.998 wall-s	2829197080 B/op	39766932 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	4926057084 ns/op	      2030 pages/s	       492.6 us/page	         4.926 wall-s	2829446928 B/op	39765862 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	4973607916 ns/op	      2011 pages/s	       497.3 us/page	         4.974 wall-s	2831020568 B/op	39770383 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	4975800875 ns/op	      2010 pages/s	       497.5 us/page	         4.976 wall-s	2831796080 B/op	39770576 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	5033970416 ns/op	      1987 pages/s	       503.3 us/page	         5.034 wall-s	2829263392 B/op	39765176 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	5069983750 ns/op	      1973 pages/s	       506.9 us/page	         5.070 wall-s	2829988328 B/op	39768012 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	5044544834 ns/op	      1983 pages/s	       504.4 us/page	         5.045 wall-s	2832953032 B/op	39771957 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	5018979333 ns/op	      1993 pages/s	       501.8 us/page	         5.019 wall-s	2831580168 B/op	39770953 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	4917519250 ns/op	      2034 pages/s	       491.7 us/page	         4.918 wall-s	2832805960 B/op	39771828 allocs/op
+BenchmarkBuildBlogHighlight/10000/3-blocks-14                 	       1	5044085584 ns/op	      1983 pages/s	       504.4 us/page	         5.044 wall-s	2830652920 B/op	39769415 allocs/op
+PASS
+ok  	github.com/mrled/antedom	737.124s
