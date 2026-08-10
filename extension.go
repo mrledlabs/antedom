@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/grafana/sobek"
 	"golang.org/x/net/html"
@@ -104,8 +103,8 @@ func (e *projectExtension) jsonManifest(call sobek.FunctionCall) sobek.Value {
 	if !ok || fileValue == "" {
 		panic(e.vm.NewTypeError("antedom.go.jsonManifest file is required"))
 	}
-	file := filepath.ToSlash(filepath.Clean(fileValue))
-	if filepath.IsAbs(file) || file == "." || file == ".." || strings.HasPrefix(file, "../") {
+	file, err := cleanArtifactPath(fileValue)
+	if err != nil {
 		panic(e.vm.NewTypeError("antedom.go.jsonManifest file must stay within the output directory"))
 	}
 	return e.vm.NewDynamicObject(&outputToken{file: file})
