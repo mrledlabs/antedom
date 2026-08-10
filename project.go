@@ -92,10 +92,14 @@ func (o *Operation) Build(out string) (int, error) {
 		return 0, err
 	}
 	options := BuildOptions{}
+	output := Output(NewHTMLOutput(out))
 	if extension != nil {
 		options.PageDocument = extension.pageDocument
+		if extra := extension.buildOutputs(out); len(extra) != 0 {
+			output = NewOutputGroup(append([]Output{output}, extra...)...)
+		}
 	}
-	return site.BuildWithOptions(o.operationContext(), plan, NewHTMLOutput(out), options)
+	return site.BuildWithOptions(o.operationContext(), plan, output, options)
 }
 
 // Handler returns the operation's project handler. It checks both the

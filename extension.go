@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/grafana/sobek"
 	"golang.org/x/net/html"
@@ -20,6 +21,12 @@ type projectExtension struct {
 	vm            *sobek.Runtime
 	versionCalled bool
 	hooks         []sobek.Callable
+	outputs       []extensionOutput
+}
+
+type extensionOutput struct {
+	name string
+	file string
 }
 
 // loadProjectExtension loads <root>/antedom.js. A missing file means no
@@ -44,6 +51,16 @@ func loadProjectExtension(root string) (*projectExtension, error) {
 	if err := api.DefineDataProperty("on", vm.ToValue(ext.on), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
 		return nil, err
 	}
+	if err := api.DefineDataProperty("output", vm.ToValue(ext.output), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	goAPI := vm.NewObject()
+	if err := goAPI.DefineDataProperty("jsonManifest", vm.ToValue(ext.jsonManifest), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
+	if err := api.DefineDataProperty("go", goAPI, sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_TRUE); err != nil {
+		return nil, err
+	}
 	if err := vm.Set("antedom", api); err != nil {
 		return nil, err
 	}
@@ -56,6 +73,79 @@ func loadProjectExtension(root string) (*projectExtension, error) {
 	}
 	return ext, nil
 }
+
+func (e *projectExtension) jsonManifest(call sobek.FunctionCall) sobek.Value {
+	if !e.versionCalled {
+		panic(e.vm.NewTypeError("antedom.apiVersion(1) must be called before antedom.go.jsonManifest"))
+	}
+	arg := call.Argument(0)
+	obj, ok := arg.(*sobek.Object)
+	if !ok || sobek.IsNull(arg) {
+		panic(e.vm.NewTypeError("antedom.go.jsonManifest options must be an object"))
+	}
+	for _, key := range obj.Keys() {
+		if key != "file" {
+			panic(e.vm.NewTypeError("unknown antedom.go.jsonManifest option %q", key))
+		}
+	}
+	value := obj.Get("file")
+	if value == nil || sobek.IsUndefined(value) {
+		panic(e.vm.NewTypeError("antedom.go.jsonManifest file is required"))
+	}
+	fileValue, ok := value.Export().(string)
+	if !ok || fileValue == "" {
+		panic(e.vm.NewTypeError("antedom.go.jsonManifest file is required"))
+	}
+	file := filepath.ToSlash(filepath.Clean(fileValue))
+	if filepath.IsAbs(file) || file == "." || file == ".." || strings.HasPrefix(file, "../") {
+		panic(e.vm.NewTypeError("antedom.go.jsonManifest file must stay within the output directory"))
+	}
+	return e.vm.NewDynamicObject(&outputToken{file: file})
+}
+
+func (e *projectExtension) output(call sobek.FunctionCall) sobek.Value {
+	if !e.versionCalled {
+		panic(e.vm.NewTypeError("antedom.apiVersion(1) must be called before antedom.output"))
+	}
+	name, ok := call.Argument(0).Export().(string)
+	if !ok || name == "" {
+		panic(e.vm.NewTypeError("antedom.output name is required"))
+	}
+	for _, output := range e.outputs {
+		if output.name == name {
+			panic(e.vm.NewTypeError("antedom output %q is already registered", name))
+		}
+	}
+	token, ok := call.Argument(1).Export().(*outputToken)
+	if !ok {
+		panic(e.vm.NewTypeError("antedom.output %q requires an antedom.go output", name))
+	}
+	for _, output := range e.outputs {
+		if output.file == token.file {
+			panic(e.vm.NewTypeError("antedom output file %q is already registered", token.file))
+		}
+	}
+	e.outputs = append(e.outputs, extensionOutput{name: name, file: token.file})
+	return sobek.Undefined()
+}
+
+func (e *projectExtension) buildOutputs(root string) []Output {
+	outputs := make([]Output, 0, len(e.outputs))
+	for _, output := range e.outputs {
+		manifest := NewJSONManifestOutput(filepath.Join(root, filepath.FromSlash(output.file)))
+		manifest.OutputPath = output.file
+		outputs = append(outputs, manifest)
+	}
+	return outputs
+}
+
+type outputToken struct{ file string }
+
+func (*outputToken) Get(string) sobek.Value       { return nil }
+func (*outputToken) Set(string, sobek.Value) bool { return false }
+func (*outputToken) Has(string) bool              { return false }
+func (*outputToken) Delete(string) bool           { return false }
+func (*outputToken) Keys() []string               { return nil }
 
 func (e *projectExtension) apiVersion(call sobek.FunctionCall) sobek.Value {
 	if e.versionCalled {

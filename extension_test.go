@@ -2,6 +2,7 @@ package antedom
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -59,6 +60,39 @@ func TestLoadProjectExtension(t *testing.T) {
 			src:  `antedom.apiVersion(1); antedom.on("page:document", 42);`,
 			want: "must be a function",
 		},
+		"output before version": {
+			src:  `antedom.output("manifest", 42);`,
+			want: "must be called before antedom.output",
+		},
+		"manifest before version": {
+			src:  `antedom.go.jsonManifest({file: "pages.json"});`,
+			want: "must be called before antedom.go.jsonManifest",
+		},
+		"manifest missing file": {
+			src:  `antedom.apiVersion(1); antedom.go.jsonManifest({});`,
+			want: "file is required",
+		},
+		"manifest escapes output": {
+			src:  `antedom.apiVersion(1); antedom.go.jsonManifest({file: "../pages.json"});`,
+			want: "must stay within the output directory",
+		},
+		"invalid output": {
+			src:  `antedom.apiVersion(1); antedom.output("manifest", {});`,
+			want: "requires an antedom.go output",
+		},
+		"duplicate output name": {
+			src: `antedom.apiVersion(1);
+const a = antedom.go.jsonManifest({file: "a.json"});
+const b = antedom.go.jsonManifest({file: "b.json"});
+antedom.output("manifest", a); antedom.output("manifest", b);`,
+			want: "already registered",
+		},
+		"duplicate output file": {
+			src: `antedom.apiVersion(1);
+antedom.output("a", antedom.go.jsonManifest({file: "pages.json"}));
+antedom.output("b", antedom.go.jsonManifest({file: "pages.json"}));`,
+			want: "output file",
+		},
 		"syntax error": {
 			src:  `this is not valid {`,
 			want: "SyntaxError",
@@ -81,6 +115,67 @@ func TestLoadProjectExtension(t *testing.T) {
 				t.Fatalf("error lacks configuration filename: %v", err)
 			}
 		})
+	}
+}
+
+func TestProjectExtensionJSONManifest(t *testing.T) {
+	root := t.TempDir()
+	if err := testsites.Blog(root, 2); err != nil {
+		t.Fatal(err)
+	}
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+antedom.output("manifest", antedom.go.jsonManifest({file: "data/pages.json"}));
+`)
+	out := t.TempDir()
+	built, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if built != 3 {
+		t.Fatalf("built %d pages, want 3", built)
+	}
+	if _, err := os.Stat(filepath.Join(out, "index.html")); err != nil {
+		t.Fatalf("default HTML output missing: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, "data", "pages.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var records []struct {
+		Path       string         `json:"path"`
+		OutputPath string         `json:"outputPath"`
+		Format     SourceFormat   `json:"format"`
+		Size       int            `json:"size"`
+		Meta       map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(data, &records); err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 3 {
+		t.Fatalf("manifest has %d records, want 3", len(records))
+	}
+	if records[0].Path != "/" || records[0].OutputPath != "index.html" || records[0].Size == 0 {
+		t.Fatalf("first manifest record = %#v", records[0])
+	}
+}
+
+func TestProjectExtensionOutputCollision(t *testing.T) {
+	root := t.TempDir()
+	if err := testsites.Blog(root, 1); err != nil {
+		t.Fatal(err)
+	}
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+antedom.output("manifest", antedom.go.jsonManifest({file: "index.html"}));
+`)
+	out := t.TempDir()
+	_, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(out)
+	if err == nil || !strings.Contains(err.Error(), `conflicts with page index.html`) {
+		t.Fatalf("output collision error = %v", err)
+	}
+	if entries, readErr := os.ReadDir(out); readErr != nil || len(entries) != 0 {
+		t.Fatalf("failed begin wrote output: entries=%v error=%v", entries, readErr)
 	}
 }
 

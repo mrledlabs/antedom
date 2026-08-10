@@ -98,41 +98,18 @@ antedom never ships project extensions.
   cannot span pages in serve the way it can within a single build, because
   each request is a fresh runtime.
 
+- Builds always write the normal HTML tree and may fan each ephemeral
+  `RenderedPage` out synchronously to additional outputs. The first configured
+  output is a streaming JSON manifest: it records each page's path, output
+  path, source format, rendered byte size, and metadata, then atomically
+  publishes the array on commit without retaining page DOMs or bodies.
+
 Rendering is still sequential. Serve mode still discovers the current page
 list per request. The MVP extension is not used by `new`. There is
-no module loader, Go capability registry, multi-output fan-out, or incremental
-dependency graph yet.
+no module loader, general Go capability registry, or incremental dependency
+graph yet.
 
 ## Outstanding MVP work
-
-### Extensions in serve mode
-
-`antedom serve` currently renders through `Site.Handler` without loading
-`antedom.js`, so extension behavior such as highlighting appears in `build`
-output but not development-server responses.
-
-The smallest correct MVP implementation is to load a fresh extension runtime
-for each rendered page request, discover the current `Page`, and invoke the
-same hook-enabled render path used by a build. Static assets should bypass
-extension loading. This has useful development semantics:
-
-- concurrent requests have isolated Sobek runtimes;
-- edits to `antedom.js` take effect on the next request;
-- a broken extension returns a contextual HTTP 500 without crashing the
-  server; and
-- there is no mutex, stale callback state, or runtime-replacement protocol.
-
-The cost is parsing and evaluating `antedom.js` per rendered request. Benchmark
-request latency with no configuration, a minimal configuration, a no-op hook,
-and highlighting. If runtime loading is material, replace this with a cached,
-mutex-protected runtime that is atomically recreated when the configuration
-changes. That optimization also requires deciding whether extension state is
-expected to persist across requests.
-
-Implementation requires a hook-aware `Site.HandlerWithOptions` (with the
-existing `Handler` delegating to empty options) and request rendering against
-the discovered `Page`, so serve hooks receive the same paths and metadata as
-build hooks.
 
 ### Repeated highlighting
 
@@ -585,10 +562,25 @@ rebuilds. Serve integration was added after the initial slice: serve runs the
 same hook per rendered request with a per-request extension load, as described
 in the implementation status.
 
-The HTML output should remain enabled by default. Add a small fan-out output
-that sends each ephemeral `RenderedPage` synchronously to HTML and manifest
-outputs before releasing it. This proves that aggregate formats fit the output
-contract without holding all rendered pages in memory.
+The HTML output remains enabled by default. `OutputGroup` sends each ephemeral
+`RenderedPage` synchronously to HTML and configured outputs before releasing
+it. The JSON manifest proves that aggregate formats fit the output contract
+without holding all rendered pages in memory:
+
+```js
+antedom.output("manifest", antedom.go.jsonManifest({
+  file: "pages.json",
+}));
+```
+
+The manifest itself is transactional: it streams to a temporary file and
+renames it only on commit. `OutputGroup` begins children in registration order,
+forwards pages and assets in that order, and aborts begun children in reverse
+order after a failure. This is coordinated best-effort cleanup, not an atomic
+transaction across unrelated destinations: the current HTML output writes
+directly to its final tree and cannot undo files already written, and a later
+child can still fail after an earlier child commits. True cross-output atomic
+publication would require a separate prepare/publish phase.
 
 ### Why this is enough
 
@@ -674,10 +666,10 @@ absolute per-page cost as the more durable metric.
    adding JavaScript extensions.
 2. **Complete:** introduce lightweight `Page` and `BuildPlan` models and
    first-class HTML output while preserving current behavior.
-3. **In progress:** the project script, API gate, page hook, and Go-backed
-   highlighter are implemented and benchmarkable. The optimized per-page JS
-   boundary is inside the provisional performance gate. Complete the MVP with
-   synchronous output fan-out and a JSON manifest.
+3. **Complete:** the project script, API gate, page hook, Go-backed highlighter,
+   synchronous output fan-out, and streaming JSON manifest are implemented and
+   benchmarkable. The optimized per-page JS boundary is inside the provisional
+   performance gate.
 4. If the experiment succeeds, replace the single script loader with the
    extension runtime, module resolver, and stable `defineProject()` API.
    Include a build-level data hook that injects values into template scope —

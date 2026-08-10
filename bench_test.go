@@ -93,13 +93,16 @@ func BenchmarkBuildBlog(b *testing.B) {
 
 // Extension overhead through the same generated-site build. "minimal" loads
 // the runtime but registers nothing; "noop-hook" also crosses the complete
-// read-only page boundary once per page.
+// read-only page boundary once per page; "manifest" writes HTML plus a
+// streaming JSON page manifest.
 //
 //	go test -run '^$' -bench 'BuildBlogExtension' -benchtime=1x -benchmem
 func BenchmarkBuildBlogExtension(b *testing.B) {
 	configs := map[string]string{
 		"minimal":   `antedom.apiVersion(1);`,
 		"noop-hook": `antedom.apiVersion(1); antedom.on("page:document", () => {});`,
+		"manifest": `antedom.apiVersion(1);
+antedom.output("manifest", antedom.go.jsonManifest({file: "pages.json"}));`,
 	}
 	for _, n := range []int{100, 1000, 10000} {
 		for name, config := range configs {
