@@ -190,6 +190,9 @@ antedom.output("manifest", {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Byte equality holds because readOnlyObject exports keys sorted, which
+	// JSON.stringify preserves and encoding/json produces for Go maps. If
+	// readOnlyObject's key ordering changes, this comparison breaks first.
 	if string(generated) != string(data) {
 		t.Fatalf("generated manifest differs from Go manifest:\nGo: %s\nJS: %s", data, generated)
 	}

@@ -114,6 +114,13 @@ func TestDocsSite(t *testing.T) {
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},
+		// The JS sitemap output registered by docs/antedom.js: the docs
+		// exercise the extension output path the same way they exercise
+		// the engine, so the two cannot drift.
+		"sitemap.xml": {
+			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
+			`<url><loc>https://mrled.github.io/antedom/templating/</loc></url>`,
+		},
 		// No ante:layout: opaque, copied verbatim, absent from the nav.
 		"pages/non-page-example.md": {"# Non-page Markdown file example"},
 	} {

@@ -558,6 +558,9 @@ func (e *projectExtension) readOnlyObject(value map[string]any) sobek.Value {
 		keys = append(keys, key)
 		values[key] = e.readOnlyValue(item)
 	}
+	// Sorted keys make JavaScript iteration and JSON.stringify order
+	// deterministic and match encoding/json's sorted map keys, so a
+	// JavaScript-generated manifest can be byte-identical to the Go one.
 	sort.Strings(keys)
 	return e.vm.NewDynamicObject(&readOnlyObject{values: values, keys: keys})
 }

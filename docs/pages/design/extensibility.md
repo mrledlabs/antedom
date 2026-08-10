@@ -112,9 +112,10 @@ graph yet.
 
 ## Outstanding MVP work
 
-Measure the generalized JavaScript output callback at 10,000 pages and add a
-real sitemap or search-index configuration to the documentation site. Page
-text extraction is intentionally basic concatenated rendered text for now; a
+The generalized JavaScript output callback has been measured at 10,000 pages
+(the results are recorded with the proof-of-concept below), and the
+documentation site now configures a real JavaScript sitemap output. Page
+text extraction remains intentionally basic concatenated rendered text; a
 search implementation may reveal that it needs configurable exclusion of
 navigation, scripts, styles, or other layout content.
 
