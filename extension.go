@@ -300,9 +300,15 @@ func (o *javascriptArtifactOutput) invoke(stage string, fn sobek.Callable, args 
 	return nil
 }
 
+// outputPageValue exposes one rendered page to output callbacks. The meta,
+// html, and text conversions are memoized so a callback reading a field
+// repeatedly converts the body or walks the DOM at most once per page.
 type outputPageValue struct {
 	extension *projectExtension
 	page      *RenderedPage
+	meta      sobek.Value
+	html      sobek.Value
+	text      sobek.Value
 }
 
 func (p *outputPageValue) Get(key string) sobek.Value {
@@ -323,11 +329,20 @@ func (p *outputPageValue) Get(key string) sobek.Value {
 	case "size":
 		return p.extension.vm.ToValue(len(p.page.HTML))
 	case "meta":
-		return p.extension.readOnlyValue(p.page.Page.Meta)
+		if p.meta == nil {
+			p.meta = p.extension.readOnlyValue(p.page.Page.Meta)
+		}
+		return p.meta
 	case "html":
-		return p.extension.vm.ToValue(string(p.page.HTML))
+		if p.html == nil {
+			p.html = p.extension.vm.ToValue(string(p.page.HTML))
+		}
+		return p.html
 	case "text":
-		return p.extension.vm.ToValue(text(p.page.Document))
+		if p.text == nil {
+			p.text = p.extension.vm.ToValue(text(p.page.Document))
+		}
+		return p.text
 	default:
 		return nil
 	}
