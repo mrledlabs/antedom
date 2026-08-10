@@ -166,6 +166,33 @@ antedom.output("manifest", antedom.go.jsonManifest({file: "data/pages.json"}));
 	if records[0].Path != "/" || records[0].OutputPath != "index.html" || records[0].Size == 0 {
 		t.Fatalf("first manifest record = %#v", records[0])
 	}
+
+	writeExtension(t, root, `
+antedom.apiVersion(1);
+let first = true;
+antedom.output("manifest", {
+  file: "data/pages.json",
+  begin(_, output) { output.write("[\n"); },
+  page(page, output) {
+    if (!first) output.write(",\n");
+    first = false;
+    output.writeJSON({path: page.urlPath, outputPath: page.outputPath, format: page.format, size: page.size, meta: page.meta});
+    output.write("\n");
+  },
+  end(_, output) { output.write("]\n"); },
+});
+`)
+	generatedOut := t.TempDir()
+	if _, err := NewProject(root).Operation(context.Background(), OperationBuild).Build(generatedOut); err != nil {
+		t.Fatal(err)
+	}
+	generated, err := os.ReadFile(filepath.Join(generatedOut, "data", "pages.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(generated) != string(data) {
+		t.Fatalf("generated manifest differs from Go manifest:\nGo: %s\nJS: %s", data, generated)
+	}
 }
 
 func TestProjectExtensionGeneratedArtifacts(t *testing.T) {

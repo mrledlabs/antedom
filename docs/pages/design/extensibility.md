@@ -594,12 +594,14 @@ antedom.output("manifest", antedom.go.jsonManifest({
 }));
 ```
 
-A one-run 10,001-page benchmark on Linux/arm64 measured the minimal extension
-at 1.459 s (6,856 pages/s) and a generated output that performs one JavaScript
-callback and one small write per page at 1.608 s (6,221 pages/s): about 10.2%
-wall-time overhead and 14.9 microseconds per page in this environment. This is
-a useful first bound, not a stable historical result; the checked-in benchmark
-should be repeated alongside future output changes.
+A three-sample benchmark (three builds per sample) on Linux/arm64 compared the
+Go manifest with a JavaScript-generated manifest whose output is asserted
+byte-for-byte identical. At 10,001 pages, Go averaged 1.549 s and JavaScript
+1.610 s: the generalized path added about 61 ms per build, 6.1 microseconds per
+page, or 3.9% wall time. JavaScript allocated about 44 MB and 800,000 objects
+more per build (roughly 4.4 KB and 80 allocations per page), largely from
+constructing JavaScript objects and `JSON.stringify`. Wall time is acceptable
+for the MVP, while allocation reduction is the clearest future optimization.
 
 `OutputGroup` begins children in registration order,
 forwards pages and assets in that order, and aborts begun children in reverse
