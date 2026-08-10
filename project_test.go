@@ -226,6 +226,41 @@ func TestArtifactCacheWarm(t *testing.T) {
 	}
 }
 
+func TestOperationClose(t *testing.T) {
+	root := t.TempDir()
+	writeCodeSite(t, root)
+	writeExtension(t, root, artifactExtension)
+
+	op := NewProject(root).Operation(context.Background(), OperationServe)
+	h := op.Handler()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/sitemap.xml", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /sitemap.xml = %d: %s", rec.Code, rec.Body)
+	}
+	dir := op.artifacts.dir
+	if dir == "" {
+		t.Fatal("artifact cache has no directory after a request")
+	}
+
+	if err := op.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("cache directory %s survived Close: %v", dir, err)
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/sitemap.xml", nil))
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("GET /sitemap.xml after Close = %d, want 500", rec.Code)
+	}
+
+	// Close is a no-op on operations that never served.
+	if err := NewProject(root).Operation(context.Background(), OperationBuild).Close(); err != nil {
+		t.Errorf("Close on unserved operation: %v", err)
+	}
+}
+
 func TestServeArtifactsWithoutExtension(t *testing.T) {
 	root := t.TempDir()
 	writeCodeSite(t, root)

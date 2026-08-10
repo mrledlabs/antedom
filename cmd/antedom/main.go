@@ -9,8 +9,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -18,6 +24,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	var siteDir string
 
 	root := &cobra.Command{
@@ -58,12 +67,23 @@ func main() {
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			op := antedom.NewProject(siteDir).Operation(cmd.Context(), antedom.OperationServe)
+			defer op.Close()
 			handler := http.Handler(op.Handler())
 			if reload {
 				handler = antedom.LiveReload(handler, siteDir)
 			}
+			server := &http.Server{Addr: listen, Handler: handler}
+			go func() {
+				<-cmd.Context().Done()
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				server.Shutdown(shutdownCtx)
+			}()
 			log.Printf("antedom serving %s on %s", siteDir, listen)
-			return http.ListenAndServe(listen, handler)
+			if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+				return err
+			}
+			return nil
 		},
 	}
 	serveCmd.Flags().StringVar(&listen, "listen", "127.0.0.1:26833", "listen address")
@@ -91,7 +111,7 @@ func main() {
 
 	root.AddCommand(buildCmd, serveCmd, newCmd)
 
-	if err := root.Execute(); err != nil {
+	if err := root.ExecuteContext(ctx); err != nil {
 		log.Fatal(err)
 	}
 }

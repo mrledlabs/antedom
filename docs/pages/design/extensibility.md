@@ -145,8 +145,9 @@ needs configurable exclusion rules beyond the authored-content boundary.
 Generated aggregate outputs now run during `serve` as well as `build`: serve
 routes files such as `sitemap.xml` and `feed.xml` to a fingerprint-invalidated
 artifact cache (see the serve bullet above). The cache directory is a
-per-process temporary directory; a persistent location is deferred until a
-deployment needs it.
+per-process temporary directory, removed by `Operation.Close` — the CLI
+closes the operation on graceful shutdown (SIGINT/SIGTERM). A persistent
+location is deferred until a deployment needs it.
 
 ## Project configuration
 

@@ -64,6 +64,8 @@ type Operation struct {
 	Kind    OperationKind
 	Project *Project
 	Context context.Context
+
+	artifacts *artifactCache
 }
 
 // NewOperation creates an operation. A nil context is treated as Background.
@@ -154,8 +156,11 @@ func (o *Operation) Handler() http.Handler {
 	next := o.Project.Site().HandlerWithOptions(HandlerOptions{
 		PageDocument: o.servePageDocument,
 	})
-	artifacts := &artifactCache{op: o}
-	go artifacts.warm()
+	if o.artifacts == nil {
+		o.artifacts = &artifactCache{op: o}
+		go o.artifacts.warm()
+	}
+	artifacts := o.artifacts
 	ctx := o.operationContext()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
@@ -175,6 +180,15 @@ func (o *Operation) Handler() http.Handler {
 	})
 }
 
+// Close releases resources the operation holds — serve's artifact cache
+// directory. It is safe on any operation, closed or not.
+func (o *Operation) Close() error {
+	if o == nil || o.artifacts == nil {
+		return nil
+	}
+	return o.artifacts.close()
+}
+
 // artifactCache serves registered extension outputs in serve mode. Pages
 // render fresh per request, but an artifact such as a sitemap needs the whole
 // site, so artifacts are rebuilt on demand into a temporary directory and
@@ -185,10 +199,11 @@ func (o *Operation) Handler() http.Handler {
 type artifactCache struct {
 	op *Operation
 
-	mu    sync.Mutex
-	dir   string
-	fp    uint64
-	valid bool
+	mu     sync.Mutex
+	dir    string
+	fp     uint64
+	valid  bool
+	closed bool
 }
 
 // match reports the registered output file the request addresses, if any,
@@ -259,6 +274,9 @@ func (c *artifactCache) refresh(rel string) (string, error) {
 // unseen. It covers the conventional project inputs; a custom Project.Data
 // source is invisible to it.
 func (c *artifactCache) refreshLocked() error {
+	if c.closed {
+		return fmt.Errorf("serve artifact cache is closed")
+	}
 	if c.dir == "" {
 		dir, err := os.MkdirTemp("", "antedom-artifacts-")
 		if err != nil {
@@ -280,6 +298,20 @@ func (c *artifactCache) refreshLocked() error {
 		c.fp, c.valid = fp, true
 	}
 	return nil
+}
+
+// close removes the cache directory. A rebuild in progress finishes first:
+// both hold mu, so close waits and the built files are removed here.
+func (c *artifactCache) close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.closed, c.valid = true, false
+	if c.dir == "" {
+		return nil
+	}
+	dir := c.dir
+	c.dir = ""
+	return os.RemoveAll(dir)
 }
 
 // servePageDocument loads the project extension for one request's render.
