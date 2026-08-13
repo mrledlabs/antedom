@@ -16,7 +16,7 @@ Prereqs:
 Then run the benchmark:
 
 ```sh
-go test -run '^$' -bench 'BenchmarkBuildBlog' -count 10 -benchtime 1x | tee docs/pages/design/benchmarks/$(date '+%Y%m%d-%H%M%S')-$(git rev-parse --short HEAD).txt
+go test ./engine -run '^$' -bench 'BenchmarkBuildBlog' -count 10 -benchtime 1x | tee docs/pages/design/benchmarks/$(date '+%Y%m%d-%H%M%S')-$(git rev-parse --short HEAD).txt
 ```
 
 Some notes:
@@ -43,7 +43,7 @@ Benchmarks named `BenchmarkDiag` answer one-off design questions — for
 example, pricing the `antedom.xml` tagged template against raw string
 concatenation, or an expression-compilation-heavy page against a
 cache-friendly one. They stay runnable
-(`go test -run '^$' -bench Diag -benchtime 1x`), but the recording
+(`go test ./engine -run '^$' -bench Diag -benchtime 1x`), but the recording
 command's `BenchmarkBuildBlog` pattern deliberately leaves them out.
 
 ## Recordings

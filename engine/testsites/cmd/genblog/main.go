@@ -1,8 +1,8 @@
 // Command genblog writes a synthetic blog-shaped antedom project for
 // manual timing and serve-mode testing:
 //
-//	go run ./testsites/cmd/genblog -n 1000 -o /tmp/blog1k
-//	time go run ./cmd/antedom build --site /tmp/blog1k -o /tmp/blog1k-out
+//	go run ./engine/testsites/cmd/genblog -n 1000 -o /tmp/blog1k
+//	time go run ./engine/cmd/antedom build --site /tmp/blog1k -o /tmp/blog1k-out
 //
 // Timed builds are also available as benchmarks without leaving a
 // directory behind: go test -bench BuildBlog -benchtime 1x
@@ -12,7 +12,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/mrled/antedom/testsites"
+	"github.com/mrled/antedom/engine/testsites"
 )
 
 func main() {

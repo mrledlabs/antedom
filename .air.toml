@@ -5,9 +5,9 @@ tmp_dir = "tmp"
 # cmd and full_bin run through `sh -c`, so $(go env ...) resolves per-platform:
 # the binary lands in e.g. bin/darwin-arm64/ on macOS and bin/linux-arm64/ in
 # Docker, so the two builds don't clobber each other on a shared mount.
-cmd = "go build -o ./bin/$(go env GOOS)-$(go env GOARCH)/antedom ./cmd/antedom"
+cmd = "go build -o ./bin/$(go env GOOS)-$(go env GOARCH)/antedom ./engine/cmd/antedom"
 full_bin = "./bin/$(go env GOOS)-$(go env GOARCH)/antedom serve --site docs"
 include_ext = ["go"]
 exclude_regex = ["_test\\.go$"]
 # serve live-reloads docs content itself; only Go changes need a rebuild.
-exclude_dir = ["bin", "tmp", "docs", "testcheckout", "testdata", "testsites"]
+exclude_dir = ["bin", "tmp", "docs", "engine/testcheckout", "engine/testdata", "engine/testsites"]

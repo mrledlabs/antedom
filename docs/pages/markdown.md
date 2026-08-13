@@ -111,6 +111,6 @@ All of them are sugar pages —
 metadata names the layout, the body fills its default slot,
 no wrapper templates in the source;
 the `.html` pages under `demo/` use the explicit form.
-Serve with `go run ./cmd/antedom serve --site docs`;
+Serve from the repository root with
+`go run ./engine/cmd/antedom serve --site docs`;
 `TestDocsSite` builds it in the normal test run.
-

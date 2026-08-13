@@ -18,7 +18,8 @@ The directive reference lives in the package doc comment
 
 These docs are themselves an antedom site —
 markdown pages, composed into `layout/base.html`,
-served with `go run ./cmd/antedom serve --site docs`.
+served with `go run ./engine/cmd/antedom serve --site docs` from the
+repository root.
 
 - [Templating: layouts, slots, fills](templating/) —
   base templates, inheritance, and content pages
@@ -34,4 +35,3 @@ served with `go run ./cmd/antedom serve --site docs`.
   a plain-HTML page in the same site,
   exercising <code ante:text="data.site.directives.length"></code> directives
   from `data/site.json` (that count is one of them, inline in this markdown).
-

@@ -15,9 +15,9 @@ import (
 // so the docs' own antedom.js extension is exercised too.
 func TestDocsSite(t *testing.T) {
 	project := &Project{
-		Root: "docs",
+		Root: "../docs",
 		Data: func() (map[string]any, error) {
-			src, err := os.ReadFile("docs/data/site.json")
+			src, err := os.ReadFile("../docs/data/site.json")
 			if err != nil {
 				return nil, err
 			}

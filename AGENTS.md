@@ -8,10 +8,10 @@ incremental tiers over bespoke concepts.
 
 ## Where the truth lives
 
-- Directive reference: the package doc comment in [antedom.go](antedom.go).
-- Subsystem docs: the doc comment atop each file — [layout.go](layout.go)
-  (composition), [scope.go](scope.go), [shortcode.go](shortcode.go),
-  [markdown.go](markdown.go), [project.go](project.go) (Project/Operation
+- Directive reference: the package doc comment in [engine/antedom.go](engine/antedom.go).
+- Subsystem docs: the doc comment atop each file — [layout.go](engine/layout.go)
+  (composition), [scope.go](engine/scope.go), [shortcode.go](engine/shortcode.go),
+  [markdown.go](engine/markdown.go), [project.go](engine/project.go) (Project/Operation
   layer). Read the header before editing a file.
 - User docs: [docs/pages/](docs/pages/) — itself an antedom site, built by
   `TestDocsSite` so docs cannot drift from the engine.
@@ -22,17 +22,18 @@ incremental tiers over bespoke concepts.
 
 ## Layout
 
-Single flat Go package at the repo root. `cmd/antedom` is the CLI
-(`new`, `build`, `serve`). `testsites/` generates synthetic projects for
-benchmarks (never checked in). `docs/antedom.js` is the docs site's own
+The Go module and flat `antedom` package live under `engine/`.
+`engine/cmd/antedom` is the CLI (`new`, `build`, `serve`).
+`engine/testsites/` generates synthetic projects for benchmarks (never checked
+in). `docs/antedom.js` is the docs site's own
 extension (sitemap/RSS outputs).
 
 ## Commands
 
 ```sh
-go run ./cmd/antedom serve --site docs   # 127.0.0.1:26833, live-reloads content
-go run ./cmd/antedom build --site docs -o out
-go test ./...
+go run ./engine/cmd/antedom serve --site docs   # 127.0.0.1:26833, live-reloads content
+go run ./engine/cmd/antedom build --site docs -o out
+go test ./engine/...
 air                                      # dev loop; rebuilds on .go changes (see README)
 ```
 

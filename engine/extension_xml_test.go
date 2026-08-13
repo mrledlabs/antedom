@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mrled/antedom/testsites"
+	"github.com/mrled/antedom/engine/testsites"
 )
 
 func TestProjectExtensionSafeXMLAndURL(t *testing.T) {

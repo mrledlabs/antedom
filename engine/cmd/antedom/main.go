@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mrled/antedom"
+	"github.com/mrled/antedom/engine"
 )
 
 func main() {
