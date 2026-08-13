@@ -107,10 +107,12 @@ func TestDocsSite(t *testing.T) {
 		"design/index.html": {
 			"<h1>Design</h1>",
 			`<a href="extensibility/">Extensibility</a>`,
+			`<a href="assets/">Page assets</a>`,
+			`<a href="benchmarks/">Benchmarks</a>`,
 		},
 		"design/extensibility/index.html": {
 			"<h1>Extensibility</h1>",
-			"The extension system should be a small Go build kernel",
+			"The extension system is growing around a small Go build kernel",
 		},
 		"style.css": {"nav a"},
 		"icon.svg":  {"<svg"},

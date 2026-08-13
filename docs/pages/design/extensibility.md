@@ -6,10 +6,10 @@
 }
 </script>
 
-The extension system should be a small Go build kernel with a JavaScript
-orchestration layer. JavaScript decides what happens; Go provides fast,
-typed capabilities such as HTML rendering, syntax highlighting, file output,
-and SQLite generation.
+The extension system is growing around a small Go build kernel with a
+JavaScript orchestration layer. JavaScript decides what happens; Go provides
+fast, typed capabilities such as HTML rendering, syntax highlighting, and file
+output. SQLite generation remains part of the proposed design.
 
 The system should be organized around operations, hooks, and artifacts rather
 than callbacks added directly to the current implementation.
@@ -40,8 +40,9 @@ custom commands and scaffolding, and the configuration of Go capabilities.
 
 ## Implementation status
 
-The first two foundation steps are implemented. This code is useful even if
-antedom never ships project extensions.
+The foundation and proof-of-concept extension MVP are implemented. The
+remaining design sections describe both that deliberately small API and the
+larger architecture it is intended to grow into.
 
 - `Project` and `Operation` now form an application layer above `Site`.
   `build`, `serve`, and `new` all enter through that layer instead of keeping
@@ -130,7 +131,7 @@ list per request. The MVP extension is not used by `new`. There is
 no module loader, general Go capability registry, or incremental dependency
 graph yet.
 
-## Outstanding MVP work
+## Completed MVP follow-through
 
 The generalized JavaScript output callback has been measured at 10,000 pages
 (the results are recorded with the proof-of-concept below), and the
@@ -151,7 +152,10 @@ location is deferred until a deployment needs it.
 
 ## Project configuration
 
-A project has one known entry point, such as `antedom.js`:
+The target configuration API has one known entry point, such as `antedom.js`.
+This `defineProject()` and virtual-module form is not implemented yet; the
+current experimental API is the plain-script form documented in the
+[proof-of-concept MVP](#extension-proof-of-concept-mvp).
 
 ```js
 import { defineProject } from "antedom";
@@ -264,7 +268,8 @@ each rendered page.
 
 ## Hook lifecycle
 
-Begin with a small, intentional lifecycle:
+The larger extension system can grow into this intentional lifecycle. The MVP
+currently implements only `page:document`:
 
 ```text
 project:load
@@ -321,7 +326,8 @@ Dependency ordering can later support `before` and `after` constraints.
 
 ## Go-backed capabilities
 
-Optimized Go features are registered capabilities:
+The generalized capability registry is proposed, not implemented. It would
+expose optimized Go features through an interface such as:
 
 ```go
 type Capability interface {
@@ -380,7 +386,9 @@ text and metadata without needing serialized HTML.
 
 ## The `new` operation
 
-`new` uses the same project runtime and a structured request:
+The CLI already enters through `Project` and `Operation`, but extension hooks
+do not yet run for `new`. The proposed extension flow uses the project runtime
+and a structured request:
 
 ```go
 type NewRequest struct {
@@ -520,8 +528,9 @@ commands, SQLite, dependency ordering, or incremental builds.
 
 ### Scope
 
-Load one optional, trusted `antedom.js` file as a plain script for `build` only.
-Do not implement ES modules or imports yet. Install one global host object:
+The initial slice loaded one optional, trusted `antedom.js` file as a plain
+script for `build` only. Serve support was subsequently added; ES modules and
+imports remain unimplemented. The current API installs one global host object:
 
 ```js
 antedom.apiVersion(1);
@@ -709,14 +718,14 @@ the permanent API surface.
 later become the implementation behind `defineProject()` and virtual modules;
 the MVP syntax should therefore be documented as experimental.
 
-### Performance experiment
+### Performance experiment design
 
-The experiment needs two small `testsites` extensions first: generated posts
-with zero, one, and several fenced code blocks, and an option to write an
+The completed experiment added two small `testsites` extensions: generated
+posts with zero, one, and several fenced code blocks, and an option to write an
 `antedom.js` into the generated project.
 
-Benchmark four configurations of generated sites at 100, 1,000, and 10,000
-pages:
+It benchmarked four configurations of generated sites at 100, 1,000, and
+10,000 pages:
 
 1. No configuration file: establishes the current build baseline.
 2. A minimal `antedom.apiVersion(1)` configuration: measures runtime creation
@@ -784,7 +793,7 @@ absolute per-page cost as the more durable metric.
    synchronous output fan-out, and streaming JSON manifest are implemented and
    benchmarkable. The optimized per-page JS boundary is inside the provisional
    performance gate.
-4. If the experiment succeeds, replace the single script loader with the
+4. **Next:** replace the single script loader with the
    extension runtime, module resolver, and stable `defineProject()` API.
    Include a build-level data hook that injects values into template scope —
    likely the most common real-world extension, deliberately absent from the
