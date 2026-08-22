@@ -1,6 +1,6 @@
 antedom.apiVersion(1);
 
-const siteURL = "https://mrled.github.io/antedom";
+const siteURL = "https://mrledlabs.github.io/antedom";
 const feed = {
   title: "Antedom sample blog",
   description: "Posts from the Antedom documentation sample blog",

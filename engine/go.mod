@@ -1,4 +1,4 @@
-module github.com/mrled/antedom/engine
+module github.com/mrledlabs/antedom/engine
 
 go 1.25.0
 

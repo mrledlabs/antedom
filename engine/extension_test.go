@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mrled/antedom/engine/testsites"
+	"github.com/mrledlabs/antedom/engine/testsites"
 )
 
 func writeExtension(t *testing.T, root, src string) {

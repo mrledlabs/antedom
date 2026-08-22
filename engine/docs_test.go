@@ -121,7 +121,7 @@ func TestDocsSite(t *testing.T) {
 		// the engine, so the two cannot drift.
 		"sitemap.xml": {
 			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
-			`<loc>https://mrled.github.io/antedom/templating/</loc>`,
+			`<loc>https://mrledlabs.github.io/antedom/templating/</loc>`,
 			`<lastmod>2026-08-01</lastmod>`,
 		},
 		"feed.xml": {

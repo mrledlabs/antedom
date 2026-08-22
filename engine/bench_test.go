@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/mrled/antedom/engine/testsites"
+	"github.com/mrledlabs/antedom/engine/testsites"
 )
 
 var benchData = map[string]any{
