@@ -18,16 +18,27 @@ renders pages per request rather than acting only as a preview server.
 
 ## Development
 
-For a serve loop that also restarts on Go source changes, install
-[air](https://github.com/air-verse/air) and run it from the repo root:
+For a serve loop that also restarts on Go source changes, run
+[Air](https://github.com/air-verse/air) from the repo root:
 
 ```sh
-go install github.com/air-verse/air@latest
-air
+go run github.com/air-verse/air@v1.67.1
 ```
+
+(Currently `@latest` requires Go 1.26, which is pretty new, so we pin to an older one.)
 
 It builds to `bin/$(go env GOOS)-$(go env GOARCH)/antedom` and re-runs
 `serve --site docs` on any non-test `.go` change (see [.air.toml](.air.toml)).
 The per-platform path keeps macOS and Linux/Docker builds from clobbering
 each other. Content changes under `docs/` are handled by `serve`'s own
 live reload and don't trigger a rebuild.
+
+## systemd user service
+
+The unit also uses `air` to re-run the executable when the source changes.
+
+```sh
+ln -sf $PWD/scripts/antedom.service ~/.config/systemd/user/antedom.service
+systemctl --user daemon-reload
+systemctl --user enable --now antedom
+```

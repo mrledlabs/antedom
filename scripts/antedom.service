@@ -1,0 +1,16 @@
+# Run the antedom checkout through Air as a systemd user service.
+
+[Unit]
+Description=antedom (Air)
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=/mnt/aiworkspace/antedom
+Environment=PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/env go run github.com/air-verse/air@v1.67.1
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=default.target
